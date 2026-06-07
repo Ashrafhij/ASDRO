@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Location, Waypoint } from '@/lib/types';
+import { useI18n } from '@/lib/i18n-context';
 
 interface MapViewProps {
   waypoints: Waypoint[];
@@ -13,6 +14,8 @@ interface MapViewProps {
 }
 
 export default function MapView({ waypoints, driverLocation, startLocation, height = '400px' }: MapViewProps) {
+  const { t } = useI18n();
+  const mt = t.map;
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +58,7 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
       });
       L.marker([driverLocation.lat, driverLocation.lng], { icon })
         .addTo(map)
-        .bindPopup('<b>Your Location</b>');
+        .bindPopup(`<b>${mt.yourLocation}</b>`);
       markers.push([driverLocation.lat, driverLocation.lng]);
     }
 
@@ -68,7 +71,7 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
       });
       L.marker([startLocation.lat, startLocation.lng], { icon })
         .addTo(map)
-        .bindPopup('<b>Start Location</b>');
+        .bindPopup(`<b>${mt.startLocation}</b>`);
       markers.push([startLocation.lat, startLocation.lng]);
     }
 
@@ -84,10 +87,10 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
       L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon })
         .addTo(map)
         .bindPopup(`
-          <b>Stop ${wp.order}: ${wp.customer.name}</b><br/>
+          <b>${mt.stop} ${wp.order}: ${wp.customer.name}</b><br/>
           ${wp.customer.address}<br/>
-          Est. arrival: ${wp.estimatedArrival}<br/>
-          ${wp.customer.phone ? `Phone: ${wp.customer.phone}` : ''}
+          ${mt.estArrival}: ${wp.estimatedArrival}<br/>
+          ${wp.customer.phone ? `${mt.phone}: ${wp.customer.phone}` : ''}
         `);
       markers.push([wp.customer.location.lat, wp.customer.location.lng]);
     });

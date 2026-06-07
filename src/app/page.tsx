@@ -2,15 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Customer, Location, OptimizedRoute, Waypoint } from '@/lib/types';
+import { Customer, Location, OptimizedRoute } from '@/lib/types';
 import { optimizeRoute } from '@/lib/optimizer';
 import { getDriverLocation } from '@/lib/api';
+import { useI18n } from '@/lib/i18n-context';
 import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
 export default function Home() {
+  const { t } = useI18n();
+  const pt = t.page;
+  const ht = t.header;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [driverLocation, setDriverLocation] = useState<Location | null>(null);
   const [startLocation, setStartLocation] = useState<Location | null>(null);
@@ -36,11 +41,11 @@ export default function Home() {
 
   const optimize = useCallback(async () => {
     if (customers.length === 0) {
-      setError('Add at least one customer');
+      setError(pt.addCustomerFirst);
       return;
     }
     if (!startLocation && !driverLocation) {
-      setError('Set a starting location');
+      setError(pt.setStartingLocation);
       return;
     }
     setError('');
@@ -52,11 +57,11 @@ export default function Home() {
       setCompletedIds(new Set());
       setSkippedIds(new Set());
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Optimization failed');
+      setError(err instanceof Error ? err.message : pt.optimizationFailed);
     } finally {
       setLoading(false);
     }
-  }, [customers, startLocation, driverLocation]);
+  }, [customers, startLocation, driverLocation, pt]);
 
   const handleMarkComplete = useCallback(async (customerId: string) => {
     const newCompleted = new Set(completedIds);
@@ -79,7 +84,7 @@ export default function Home() {
       const result = await optimizeRoute(remainingCustomers, currentLoc);
       setRoute(result);
     } catch {
-      // Re-optimization failed, keep current route
+      // keep current route
     }
   }, [customers, completedIds, skippedIds, driverLocation]);
 
@@ -96,14 +101,13 @@ export default function Home() {
 
     const remainingCustomers = customers.filter(c => remainingIds.has(c.id));
     const loc = driverLocation;
-
     if (!loc) return;
 
     try {
       const result = await optimizeRoute(remainingCustomers, loc);
       setRoute(result);
     } catch {
-      // Keep current route
+      // keep current route
     }
   }, [customers, completedIds, skippedIds, driverLocation]);
 
@@ -124,7 +128,7 @@ export default function Home() {
         setLocating(false);
       })
       .catch(() => {
-        setError('Could not get GPS location');
+        setError(pt.gpsError);
         setLocating(false);
       });
   };
@@ -133,7 +137,7 @@ export default function Home() {
     if (!route || route.waypoints.length === 0) return '';
     const first = route.waypoints[0].estimatedArrival;
     const last = route.waypoints[route.waypoints.length - 1].estimatedArrival;
-    return `${route.waypoints.length} stops · ${first} – ${last}`;
+    return `${route.waypoints.length} ${pt.stops} · ${first} – ${last}`;
   };
 
   return (
@@ -143,32 +147,33 @@ export default function Home() {
           <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
           </svg>
-          <h1 className="text-lg font-bold text-gray-900">ASDRO</h1>
+          <h1 className="text-lg font-bold text-gray-900">{t.app.title}</h1>
           {route && (
-            <span className="hidden sm:inline text-xs text-gray-500 ml-2">
+            <span className="hidden sm:inline text-xs text-gray-500 ms-2">
               {getArrivalSummary()}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
           <button
             onClick={handleLocateMe}
             disabled={locating}
             className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
           >
-            {locating ? 'Locating...' : driverLocation ? '📍 Located' : '📍 Locate Me'}
+            {locating ? ht.locating : driverLocation ? ht.located : ht.locateMe}
           </button>
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className="sm:hidden px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
-            {showSidebar ? 'Map' : 'List'}
+            {showSidebar ? ht.map : ht.list}
           </button>
         </div>
       </header>
 
       <div className="flex-1 flex flex-col sm:flex-row">
-        <aside className={`${showSidebar ? 'block' : 'hidden'} sm:block w-full sm:w-96 sm:max-w-md bg-white border-b sm:border-b-0 sm:border-r border-gray-200 overflow-y-auto`}>
+        <aside className={`${showSidebar ? 'block' : 'hidden'} sm:block w-full sm:w-96 sm:max-w-md bg-white border-b sm:border-b-0 sm:border-e border-gray-200 overflow-y-auto`}>
           <div className="p-4 space-y-4">
             <CustomerInput customers={customers} onChange={setCustomers} />
 
@@ -184,9 +189,9 @@ export default function Home() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Optimizing...
+                    {pt.optimizing}
                   </>
-                ) : 'Optimize Route'}
+                ) : pt.optimizeRoute}
               </button>
             )}
 
@@ -209,7 +214,7 @@ export default function Home() {
                   onClick={handleClearAll}
                   className="w-full px-3 py-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  Clear All & Start New Route
+                  {pt.clearAll}
                 </button>
               </>
             )}

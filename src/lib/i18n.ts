@@ -1,0 +1,204 @@
+export type Locale = 'en' | 'he' | 'ar';
+
+export const locales: { code: Locale; label: string; dir: 'ltr' | 'rtl' }[] = [
+  { code: 'en', label: 'English', dir: 'ltr' },
+  { code: 'he', label: 'עברית', dir: 'rtl' },
+  { code: 'ar', label: 'العربية', dir: 'rtl' },
+];
+
+export type Dict = typeof enDict;
+
+const enDict = {
+  app: { title: 'ASDRO' },
+  header: {
+    locateMe: '📍 Locate Me',
+    locating: '📍 Locating...',
+    located: '📍 Located',
+    map: 'Map',
+    list: 'List',
+  },
+  customerInput: {
+    addCustomer: 'Add Customer',
+    bulkImport: 'Bulk Import',
+    singleEntry: 'Single Entry',
+    name: 'Customer name *',
+    phone: 'Phone number',
+    location: 'Google Maps / WhatsApp link or address *',
+    notes: 'Notes (optional)',
+    add: 'Add Customer',
+    adding: 'Adding...',
+    importAll: 'Import All',
+    processing: 'Processing...',
+    customers: 'Customers',
+    remove: 'Remove',
+    errorNameLocation: 'Name and location are required',
+    errorLocation: 'Could not determine location from input',
+    bulkPlaceholder: `Paste locations (one per line)
+Format: address or link, Name (optional), Phone (optional)
+
+Example:
+https://maps.google.com/?q=40.7128,-74.0060, John, +1234567890
+123 Main St, Alice
+https://maps.app.goo.gl/abc123`,
+  },
+  map: {
+    yourLocation: 'Your Location',
+    startLocation: 'Start Location',
+    stop: 'Stop',
+    estArrival: 'Est. arrival',
+    phone: 'Phone',
+  },
+  routeList: {
+    totalDistance: 'Total Distance',
+    estDrivingTime: 'Est. Driving Time',
+    stop: 'Stop',
+    arrival: 'Arrival',
+    km: 'km',
+    min: 'min',
+    navigate: 'Navigate',
+    done: 'Done',
+    skip: 'Skip',
+  },
+  page: {
+    optimizeRoute: 'Optimize Route',
+    optimizing: 'Optimizing...',
+    setStartingLocation: 'Set a starting location',
+    addCustomerFirst: 'Add at least one customer',
+    gpsError: 'Could not get GPS location',
+    stops: 'stops',
+    clearAll: 'Clear All & Start New Route',
+    optimizationFailed: 'Optimization failed',
+  },
+};
+
+const heDict: Dict = {
+  app: { title: 'ASDRO' },
+  header: {
+    locateMe: '📍 איתור מיקומי',
+    locating: '📍 ממקם...',
+    located: '📍 אותר',
+    map: 'מפה',
+    list: 'רשימה',
+  },
+  customerInput: {
+    addCustomer: 'הוסף לקוח',
+    bulkImport: 'ייבוא מרובה',
+    singleEntry: 'הזנה ידנית',
+    name: '*שם הלקוח',
+    phone: 'מספר טלפון',
+    location: '*קישור מ-Google Maps, WhatsApp או כתובת',
+    notes: 'הערות (אופציונלי)',
+    add: 'הוסף לקוח',
+    adding: 'מוסיף...',
+    importAll: 'ייבא הכל',
+    processing: 'מעבד...',
+    customers: 'לקוחות',
+    remove: 'הסר',
+    errorNameLocation: 'נדרשים שם ומיקום',
+    errorLocation: 'לא ניתן לקבוע מיקום מהקלט',
+    bulkPlaceholder: `הדבק מיקומים (אחד בשורה)
+פורמט: כתובת או קישור, שם (אופציונלי), טלפון (אופציונלי)
+
+דוגמה:
+https://maps.google.com/?q=40.7128,-74.0060, יוחנן, +1234567890
+רחוב הרצל 1, עליזה
+https://maps.app.goo.gl/abc123`,
+  },
+  map: {
+    yourLocation: 'המיקום שלך',
+    startLocation: 'נקודת התחלה',
+    stop: 'תחנה',
+    estArrival: 'זמן הגעה משוער',
+    phone: 'טלפון',
+  },
+  routeList: {
+    totalDistance: 'מרחק כולל',
+    estDrivingTime: 'זמן נסיעה משוער',
+    stop: 'תחנה',
+    arrival: 'הגעה',
+    km: 'ק"מ',
+    min: 'דקות',
+    navigate: 'נווט',
+    done: 'בוצע',
+    skip: 'דלג',
+  },
+  page: {
+    optimizeRoute: 'בצע אופטימיזציה למסלול',
+    optimizing: 'מחשב מסלול...',
+    setStartingLocation: 'הגדר נקודת התחלה',
+    addCustomerFirst: 'הוסף לפחות לקוח אחד',
+    gpsError: 'לא ניתן לקבל מיקום GPS',
+    stops: 'תחנות',
+    clearAll: 'נקה הכל והתחל מסלול חדש',
+    optimizationFailed: 'אופטימיזציה נכשלה',
+  },
+};
+
+const arDict: Dict = {
+  app: { title: 'ASDRO' },
+  header: {
+    locateMe: '📍 تحديد موقعي',
+    locating: '📍 جارٍ التحديد...',
+    located: '📍 تم التحديد',
+    map: 'الخريطة',
+    list: 'القائمة',
+  },
+  customerInput: {
+    addCustomer: 'إضافة عميل',
+    bulkImport: 'استيراد متعدد',
+    singleEntry: 'إدخال يدوي',
+    name: '*اسم العميل',
+    phone: 'رقم الهاتف',
+    location: '*رابط Google Maps أو WhatsApp أو عنوان',
+    notes: 'ملاحظات (اختياري)',
+    add: 'إضافة عميل',
+    adding: 'جارٍ الإضافة...',
+    importAll: 'استيراد الكل',
+    processing: 'جارٍ المعالجة...',
+    customers: 'العملاء',
+    remove: 'إزالة',
+    errorNameLocation: 'الاسم والموقع مطلوبان',
+    errorLocation: 'تعذر تحديد الموقع من الإدخال',
+    bulkPlaceholder: `الصق المواقع (واحد في كل سطر)
+التنسيق: عنوان أو رابط، الاسم (اختياري)، الهاتف (اختياري)
+
+مثال:
+https://maps.google.com/?q=40.7128,-74.0060, أحمد, +1234567890
+شارع الملك 1, سارة
+https://maps.app.goo.gl/abc123`,
+  },
+  map: {
+    yourLocation: 'موقعك',
+    startLocation: 'نقطة البداية',
+    stop: 'محطة',
+    estArrival: 'الوصول المتوقع',
+    phone: 'الهاتف',
+  },
+  routeList: {
+    totalDistance: 'المسافة الإجمالية',
+    estDrivingTime: 'وقت القيادة المتوقع',
+    stop: 'محطة',
+    arrival: 'الوصول',
+    km: 'كم',
+    min: 'دقيقة',
+    navigate: 'تنقل',
+    done: 'تم',
+    skip: 'تخطي',
+  },
+  page: {
+    optimizeRoute: 'تحسين المسار',
+    optimizing: 'جارٍ تحسين المسار...',
+    setStartingLocation: 'حدد نقطة البداية',
+    addCustomerFirst: 'أضف عميلاً واحداً على الأقل',
+    gpsError: 'تعذر الحصول على موقع GPS',
+    stops: 'محطات',
+    clearAll: 'مسح الكل وبدء مسار جديد',
+    optimizationFailed: 'فشل تحسين المسار',
+  },
+};
+
+export const dictionaries: Record<Locale, Dict> = {
+  en: enDict,
+  he: heDict,
+  ar: arDict,
+};
