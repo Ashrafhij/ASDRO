@@ -28,3 +28,5 @@ body {
 .animate-fade-in {
   animation: fade-in 120ms ease-out;
 }
+
+html { scroll-behavior: smooth; }

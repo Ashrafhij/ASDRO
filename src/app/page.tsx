@@ -122,7 +122,7 @@ export default function Home() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 lg:h-screen scroll-smooth">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 px-4 py-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
@@ -140,21 +140,33 @@ export default function Home() {
             {locating ? '📡' : driverLocation ? '✅' : '📍'} <span className="hidden sm:inline">{locating ? ht.locating : driverLocation ? ht.located : ht.locateMe}</span>
           </button>
           <LanguageSwitcher />
-          <button onClick={() => setShowMap(!showMap)}
-            className="lg:hidden text-xs px-3 py-1.5 rounded-xl font-medium bg-white/15 text-white hover:bg-white/25 transition-all backdrop-blur-sm border border-white/10 active:scale-95">
-            {showMap ? '📋' : '🗺️'}
-          </button>
         </div>
       </header>
 
-      {/* Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <div className={`${showMap ? 'hidden' : 'flex'} lg:flex w-full lg:w-96 lg:flex-shrink-0 flex-col bg-white border-r border-gray-200 overflow-y-auto`}>
-          <div className="p-4 space-y-4 flex-1">{sidebarContent}</div>
+      {/* Mobile content */}
+      <div className="lg:hidden">
+        {showMap ? (
+          <div className="sticky top-[57px] h-[calc(100vh-57px)]">
+            <MapView
+              waypoints={route?.waypoints || []}
+              driverLocation={driverLocation}
+              startLocation={!driverLocation ? startLocation : null}
+              height="100%"
+            />
+          </div>
+        ) : (
+          <div className="px-4 pt-4 pb-24 space-y-4 min-h-[calc(100vh-57px)]">
+            {sidebarContent}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop content */}
+      <div className="hidden lg:flex flex-1 overflow-hidden">
+        <div className="w-96 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+          <div className="p-4 space-y-4">{sidebarContent}</div>
         </div>
-        {/* Map */}
-        <div className={`${showMap ? 'flex' : 'hidden'} lg:flex flex-1 relative`}>
+        <div className="flex-1 relative">
           <MapView
             waypoints={route?.waypoints || []}
             driverLocation={driverLocation}
@@ -163,6 +175,12 @@ export default function Home() {
           />
         </div>
       </div>
+
+      {/* Floating toggle button (mobile) */}
+      <button onClick={() => setShowMap(!showMap)}
+        className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-xl font-semibold text-sm flex items-center gap-2 border border-white/20 backdrop-blur-sm transition-all hover:shadow-2xl active:scale-95">
+        {showMap ? '📋 List' : '🗺️ Map'}
+      </button>
     </div>
   );
 }
