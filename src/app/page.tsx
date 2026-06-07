@@ -89,10 +89,10 @@ export default function Home() {
     <>
       <CustomerInput customers={customers} onChange={setCustomers} />
 
-      {customers.length > 0 && !hasRoute && (
+      {customers.length > 0 && (
         <button onClick={optimize} disabled={loading || !startLocation}
           className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2">
-          {loading ? '⏳ ' + pt.optimizing : '🚀 ' + pt.optimizeRoute}
+          {loading ? '⏳ ' + pt.optimizing : hasRoute ? '🔄 ' + pt.reoptimize : '🚀 ' + pt.optimizeRoute}
         </button>
       )}
 

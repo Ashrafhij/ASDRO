@@ -76,6 +76,7 @@ https://maps.app.goo.gl/abc123`,
     stops: 'stops',
     clearAll: 'Clear All & Start New Route',
     optimizationFailed: 'Optimization failed',
+    reoptimize: 'Re-optimize',
   },
 };
 
@@ -147,6 +148,7 @@ https://maps.app.goo.gl/abc123`,
     stops: 'תחנות',
     clearAll: 'נקה הכל והתחל מסלול חדש',
     optimizationFailed: 'אופטימיזציה נכשלה',
+    reoptimize: 'חשב מחדש',
   },
 };
 
@@ -218,6 +220,7 @@ https://maps.app.goo.gl/abc123`,
     stops: 'محطات',
     clearAll: 'مسح الكل وبدء مسار جديد',
     optimizationFailed: 'فشل تحسين المسار',
+    reoptimize: 'إعادة التحسين',
   },
 };
 

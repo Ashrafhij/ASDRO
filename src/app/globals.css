@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+input, textarea, select { font-size: 16px !important; }
+
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     'Noto Sans', 'Noto Sans Hebrew', 'Noto Sans Arabic', sans-serif;
