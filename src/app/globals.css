@@ -10,3 +10,11 @@ body {
   right: auto !important;
   left: 4px !important;
 }
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 150ms ease-out;
+}
