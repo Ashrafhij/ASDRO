@@ -23,21 +23,28 @@ export default function LanguageSwitcher() {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(!open)}
-        className="w-9 h-9 rounded-xl text-sm flex items-center justify-center bg-white/15 hover:bg-white/25 transition-all border border-white/10 active:scale-90">
-        {flags[current.code]}
+        className="w-9 h-9 rounded-xl text-base flex items-center justify-center bg-white/15 hover:bg-white/25 transition-all border border-white/10 active:scale-90 shadow-sm">
+        <span className="drop-shadow-sm">{flags[current.code]}</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[140px] z-50 animate-fade-in">
+        <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100/80 py-1.5 min-w-[160px] z-50 animate-fade-in overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
           {locales.map((l) => (
             <button key={l.code} onClick={() => { setLocale(l.code); setOpen(false); }}
-              className={`w-full px-3 py-2 text-sm flex items-center gap-2.5 transition-colors ${
+              className={`relative w-full px-4 py-2.5 text-sm flex items-center gap-3 transition-colors ${
                 locale === l.code
-                  ? 'bg-blue-50 text-blue-700 font-medium'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? 'bg-blue-100/60 text-blue-700 font-semibold'
+                  : 'text-gray-600 hover:bg-gray-50'
               }`}>
-              <span className="text-base">{flags[l.code]}</span>
+              <span className="text-lg leading-none flex-shrink-0">{flags[l.code]}</span>
               <span>{l.label}</span>
-              {locale === l.code && <span className="ms-auto text-blue-600 text-xs">✓</span>}
+              {locale === l.code && (
+                <span className="ms-auto flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+              )}
             </button>
           ))}
         </div>

@@ -127,7 +127,13 @@ export default function Home() {
       <header className="sticky top-0 z-30 bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 px-4 py-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner">
-            <span className="text-base">📍</span>
+            <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
+              <path d="M16 3C11.5 3 8 6.5 8 11c0 6 8 18 8 18s8-12 8-18c0-4.5-3.5-8-8-8z" fill="white" opacity="0.95"/>
+              <circle cx="16" cy="11" r="3.5" fill="#2563eb"/>
+              <circle cx="11" cy="8" r="1.8" fill="#10b981"/>
+              <circle cx="20" cy="7" r="1.5" fill="#f59e0b"/>
+              <path d="M13 13.5l3 2 4-1.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
           <div>
             <h1 className="text-sm font-bold text-white tracking-tight">{t.app.title}</h1>
@@ -136,7 +142,11 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleLocate} disabled={locating}
-            className="text-xs px-3 py-1.5 rounded-xl font-medium bg-white/15 text-white hover:bg-white/25 disabled:opacity-40 transition-all backdrop-blur-sm border border-white/10 active:scale-95">
+            className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all backdrop-blur-sm border active:scale-95 disabled:opacity-40 ${
+              driverLocation
+                ? 'bg-emerald-400/25 text-emerald-100 border-emerald-300/30 hover:bg-emerald-400/35'
+                : 'bg-white/15 text-white border-white/10 hover:bg-white/25'
+            }`}>
             {locating ? '📡' : driverLocation ? '✅' : '📍'} <span className="hidden sm:inline">{locating ? ht.locating : driverLocation ? ht.located : ht.locateMe}</span>
           </button>
           <LanguageSwitcher />
