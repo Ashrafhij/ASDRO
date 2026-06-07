@@ -85,6 +85,66 @@ export default function Home() {
 
   const hasRoute = route && route.waypoints.length > 0;
 
+  const sidebarContent = (
+    <>
+      <CustomerInput customers={customers} onChange={setCustomers} />
+
+      {customers.length > 0 && !hasRoute && (
+        <button
+          onClick={optimize}
+          disabled={loading || !startLocation}
+          className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              {pt.optimizing}
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              {pt.optimizeRoute}
+            </>
+          )}
+        </button>
+      )}
+
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-fade-in">
+          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+          {error}
+        </div>
+      )}
+
+      {hasRoute && (
+        <>
+          <RouteList
+            waypoints={route!.waypoints}
+            totalDistance={route!.totalDistance}
+            totalDuration={route!.totalDuration}
+            completedIds={completedIds}
+            skippedIds={skippedIds}
+            onMarkComplete={handleMarkComplete}
+            onSkip={handleSkip}
+          />
+          <button
+            onClick={handleClear}
+            className="w-full py-2.5 text-xs font-medium text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all duration-150 border border-gray-100 hover:border-rose-200"
+          >
+            {pt.clearAll}
+          </button>
+        </>
+      )}
+    </>
+  );
+
   return (
     <div className="h-dvh flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
@@ -145,79 +205,12 @@ export default function Home() {
 
       {/* Main area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <aside className={`${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 fixed lg:relative inset-y-0 start-0 z-40 w-full sm:w-96 bg-white/95 backdrop-blur-xl border-e border-gray-200/80 overflow-y-auto transition-transform duration-300 ease-in-out lg:flex-shrink-0`}>
-          <div className="p-4 lg:p-5 space-y-5">
-            <CustomerInput customers={customers} onChange={setCustomers} />
-
-            {/* Optimize button */}
-            {customers.length > 0 && !hasRoute && (
-              <button
-                onClick={optimize}
-                disabled={loading || !startLocation}
-                className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    {pt.optimizing}
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    {pt.optimizeRoute}
-                  </>
-                )}
-              </button>
-            )}
-
-            {/* Error */}
-            {error && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-fade-in">
-                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                {error}
-              </div>
-            )}
-
-            {/* Route */}
-            {hasRoute && (
-              <>
-                <RouteList
-                  waypoints={route!.waypoints}
-                  totalDistance={route!.totalDistance}
-                  totalDuration={route!.totalDuration}
-                  completedIds={completedIds}
-                  skippedIds={skippedIds}
-                  onMarkComplete={handleMarkComplete}
-                  onSkip={handleSkip}
-                />
-                <button
-                  onClick={handleClear}
-                  className="w-full py-2.5 text-xs font-medium text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all duration-150 border border-gray-100 hover:border-rose-200"
-                >
-                  {pt.clearAll}
-                </button>
-              </>
-            )}
+        {/* Desktop sidebar (always visible) */}
+        <aside className="hidden lg:block w-96 flex-shrink-0 bg-white border-e border-gray-200/80 overflow-y-auto">
+          <div className="p-5 space-y-5">
+            {sidebarContent}
           </div>
         </aside>
-
-        {/* Overlay for mobile sidebar */}
-        {sidebarOpen && (
-          <div
-            className="lg:hidden fixed inset-0 bg-black/20 z-30 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
 
         {/* Map area */}
         <main className="flex-1 relative">
@@ -231,6 +224,21 @@ export default function Home() {
           </div>
         </main>
       </div>
+
+      {/* Mobile sidebar (overlay) */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <aside className={`lg:hidden fixed top-0 bottom-0 start-0 z-[60] w-[85vw] max-w-sm bg-white shadow-xl transition-transform duration-300 ease-in-out ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="h-full overflow-y-auto p-4 space-y-5">
+          {sidebarContent}
+        </div>
+      </aside>
     </div>
   );
 }
