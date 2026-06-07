@@ -11,9 +11,9 @@ export type Dict = typeof enDict;
 const enDict = {
   app: { title: 'ASDRO' },
   header: {
-    locateMe: '📍 Locate Me',
-    locating: '📍 Locating...',
-    located: '📍 Located',
+    locateMe: 'Locate Me',
+    locating: 'Locating...',
+    located: 'Located',
     map: 'Map',
     list: 'List',
   },
@@ -82,9 +82,9 @@ https://maps.app.goo.gl/abc123`,
 const heDict: Dict = {
   app: { title: 'ASDRO' },
   header: {
-    locateMe: '📍 איתור מיקומי',
-    locating: '📍 ממקם...',
-    located: '📍 אותר',
+    locateMe: 'איתור מיקומי',
+    locating: 'ממקם...',
+    located: 'אותר',
     map: 'מפה',
     list: 'רשימה',
   },
@@ -153,9 +153,9 @@ https://maps.app.goo.gl/abc123`,
 const arDict: Dict = {
   app: { title: 'ASDRO' },
   header: {
-    locateMe: '📍 تحديد موقعي',
-    locating: '📍 جارٍ التحديد...',
-    located: '📍 تم التحديد',
+    locateMe: 'تحديد موقعي',
+    locating: 'جارٍ التحديد...',
+    located: 'تم التحديد',
     map: 'الخريطة',
     list: 'القائمة',
   },

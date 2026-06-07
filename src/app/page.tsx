@@ -91,21 +91,15 @@ export default function Home() {
 
       {customers.length > 0 && !hasRoute && (
         <button onClick={optimize} disabled={loading || !startLocation}
-          className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              {pt.optimizing}
-            </span>
-          ) : pt.optimizeRoute}
+          className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2">
+          {loading ? '⏳ ' + pt.optimizing : '🚀 ' + pt.optimizeRoute}
         </button>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm">{error}</div>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm flex items-center gap-2">
+          <span>⚠️</span> {error}
+        </div>
       )}
 
       {hasRoute && (
@@ -119,8 +113,8 @@ export default function Home() {
             onMarkComplete={handleMarkComplete}
             onSkip={handleSkip}
           />
-          <button onClick={handleClear} className="w-full py-2 text-xs text-gray-500 hover:text-red-600 rounded-xl border border-gray-200 hover:border-red-200 transition-colors">
-            {pt.clearAll}
+          <button onClick={handleClear} className="w-full py-2 text-xs text-gray-500 hover:text-red-600 rounded-xl border border-gray-200 hover:border-red-200 transition-colors flex items-center justify-center gap-1.5">
+            🗑️ {pt.clearAll}
           </button>
         </>
       )}
@@ -132,27 +126,18 @@ export default function Home() {
       {/* Header */}
       <header className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-          </div>
+          <span className="text-lg leading-none">📍</span>
           <h1 className="text-sm font-bold text-gray-900">{t.app.title}</h1>
         </div>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleLocate}
-            disabled={locating}
-            className="text-xs px-2.5 py-1.5 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors"
-          >
-            {locating ? ht.locating : driverLocation ? ht.located : ht.locateMe}
+          <button onClick={handleLocate} disabled={locating}
+            className="text-xs px-2.5 py-1.5 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors">
+            {locating ? '📡 ' + ht.locating : driverLocation ? '✅ ' + ht.located : '📍 ' + ht.locateMe}
           </button>
           <LanguageSwitcher />
-          <button
-            onClick={() => setShowMap(!showMap)}
-            className="lg:hidden text-xs px-2.5 py-1.5 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-          >
-            {showMap ? 'List' : 'Map'}
+          <button onClick={() => setShowMap(!showMap)}
+            className="lg:hidden text-xs px-2.5 py-1.5 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+            {showMap ? '📋 List' : '🗺️ Map'}
           </button>
         </div>
       </header>
