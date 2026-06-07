@@ -7,15 +7,15 @@ export default function LanguageSwitcher() {
   const { locale, setLocale } = useI18n();
   const flags: Record<string, string> = { en: '🇬🇧', he: '🇮🇱', ar: '🇸🇦' };
   return (
-    <div className="flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
+    <div className="flex items-center gap-1">
       {locales.map((l) => (
         <button key={l.code} onClick={() => setLocale(l.code)}
-          className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+          className={`w-8 h-8 rounded-xl text-sm flex items-center justify-center transition-all active:scale-90 ${
             locale === l.code
-              ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-200'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-white/25 shadow-sm ring-1 ring-white/20 scale-110'
+              : 'text-white/60 hover:text-white/80 hover:bg-white/10'
           }`}>
-          {flags[l.code]} {l.label}
+          {flags[l.code]}
         </button>
       ))}
     </div>
