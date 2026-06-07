@@ -27,7 +27,7 @@ export default function LanguageSwitcher() {
         <span className="drop-shadow-sm">{flags[current.code]}</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100/80 py-1.5 min-w-[160px] z-50 animate-fade-in overflow-hidden">
+        <div className="absolute left-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100/80 py-1.5 min-w-[160px] z-50 animate-fade-in overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
           {locales.map((l) => (
             <button key={l.code} onClick={() => { setLocale(l.code); setOpen(false); }}

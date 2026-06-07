@@ -139,6 +139,7 @@ export default function Home() {
             <h1 className="text-sm font-bold text-white tracking-tight">{t.app.title}</h1>
             <p className="text-[10px] text-blue-100/80 leading-none mt-0.5">Smart Route Optimizer</p>
           </div>
+          <LanguageSwitcher />
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleLocate} disabled={locating}
@@ -149,7 +150,6 @@ export default function Home() {
             }`}>
             {locating ? '📡' : driverLocation ? '✅' : '📍'} <span className="hidden sm:inline">{locating ? ht.locating : driverLocation ? ht.located : ht.locateMe}</span>
           </button>
-          <LanguageSwitcher />
         </div>
       </header>
 
