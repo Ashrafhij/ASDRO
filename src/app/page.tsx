@@ -124,20 +124,25 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <header className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-lg leading-none">📍</span>
-          <h1 className="text-sm font-bold text-gray-900">{t.app.title}</h1>
+      <header className="flex-shrink-0 bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 px-4 py-3 flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner">
+            <span className="text-base">📍</span>
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-white tracking-tight">{t.app.title}</h1>
+            <p className="text-[10px] text-blue-100/80 leading-none mt-0.5">Smart Route Optimizer</p>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <button onClick={handleLocate} disabled={locating}
-            className="text-xs px-2.5 py-1.5 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors">
-            {locating ? '📡 ' + ht.locating : driverLocation ? '✅ ' + ht.located : '📍 ' + ht.locateMe}
+            className="text-xs px-3 py-1.5 rounded-xl font-medium bg-white/15 text-white hover:bg-white/25 disabled:opacity-40 transition-all backdrop-blur-sm border border-white/10 active:scale-95">
+            {locating ? '📡' : driverLocation ? '✅' : '📍'} <span className="hidden sm:inline">{locating ? ht.locating : driverLocation ? ht.located : ht.locateMe}</span>
           </button>
           <LanguageSwitcher />
           <button onClick={() => setShowMap(!showMap)}
-            className="lg:hidden text-xs px-2.5 py-1.5 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-            {showMap ? '📋 List' : '🗺️ Map'}
+            className="lg:hidden text-xs px-3 py-1.5 rounded-xl font-medium bg-white/15 text-white hover:bg-white/25 transition-all backdrop-blur-sm border border-white/10 active:scale-95">
+            {showMap ? '📋' : '🗺️'}
           </button>
         </div>
       </header>
