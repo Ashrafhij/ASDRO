@@ -85,6 +85,48 @@ export default function Home() {
 
   const hasRoute = route && route.waypoints.length > 0;
 
+  const sidebarContent = (
+    <>
+      <CustomerInput customers={customers} onChange={setCustomers} />
+
+      {customers.length > 0 && !hasRoute && (
+        <button onClick={optimize} disabled={loading || !startLocation}
+          className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              {pt.optimizing}
+            </span>
+          ) : pt.optimizeRoute}
+        </button>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm">{error}</div>
+      )}
+
+      {hasRoute && (
+        <>
+          <RouteList
+            waypoints={route!.waypoints}
+            totalDistance={route!.totalDistance}
+            totalDuration={route!.totalDuration}
+            completedIds={completedIds}
+            skippedIds={skippedIds}
+            onMarkComplete={handleMarkComplete}
+            onSkip={handleSkip}
+          />
+          <button onClick={handleClear} className="w-full py-2 text-xs text-gray-500 hover:text-red-600 rounded-xl border border-gray-200 hover:border-red-200 transition-colors">
+            {pt.clearAll}
+          </button>
+        </>
+      )}
+    </>
+  );
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
@@ -117,60 +159,26 @@ export default function Home() {
 
       {/* Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar panel */}
-        <div className={`${showMap ? 'hidden' : 'flex'} lg:flex w-full lg:w-96 lg:flex-shrink-0 flex-col bg-white border-r border-gray-200 overflow-y-auto`}>
-          <div className="p-4 space-y-4 flex-1">
-            <CustomerInput customers={customers} onChange={setCustomers} />
-
-            {customers.length > 0 && !hasRoute && (
-              <button
-                onClick={optimize}
-                disabled={loading || !startLocation}
-                className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    {pt.optimizing}
-                  </span>
-                ) : pt.optimizeRoute}
-              </button>
-            )}
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm">{error}</div>
-            )}
-
-            {hasRoute && (
-              <>
-                <RouteList
-                  waypoints={route!.waypoints}
-                  totalDistance={route!.totalDistance}
-                  totalDuration={route!.totalDuration}
-                  completedIds={completedIds}
-                  skippedIds={skippedIds}
-                  onMarkComplete={handleMarkComplete}
-                  onSkip={handleSkip}
-                />
-                <button onClick={handleClear} className="w-full py-2 text-xs text-gray-500 hover:text-red-600 rounded-xl border border-gray-200 hover:border-red-200 transition-colors">
-                  {pt.clearAll}
-                </button>
-              </>
-            )}
-          </div>
+        {/* Desktop sidebar */}
+        <div className="hidden lg:block w-96 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+          <div className="p-4 space-y-4">{sidebarContent}</div>
         </div>
 
-        {/* Map panel */}
-        <div className={`${showMap ? 'flex' : 'hidden'} lg:flex flex-1 relative`}>
-          <MapView
-            waypoints={route?.waypoints || []}
-            driverLocation={driverLocation}
-            startLocation={!driverLocation ? startLocation : null}
-            height="100%"
-          />
+        {/* Map + Mobile sidebar area */}
+        <div className="flex-1 relative">
+          {/* Mobile sidebar (overlays map) */}
+          <div className={`lg:hidden absolute inset-0 z-10 bg-white overflow-y-auto ${showMap ? 'hidden' : 'block'}`}>
+            <div className="p-4 space-y-4">{sidebarContent}</div>
+          </div>
+          {/* Map (always rendered, always has dimensions) */}
+          <div className="absolute inset-0">
+            <MapView
+              waypoints={route?.waypoints || []}
+              driverLocation={driverLocation}
+              startLocation={!driverLocation ? startLocation : null}
+              height="100%"
+            />
+          </div>
         </div>
       </div>
     </div>
