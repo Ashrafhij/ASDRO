@@ -17,114 +17,65 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
   const { t } = useI18n();
   const mt = t.map;
   const mapRef = useRef<L.Map | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (mapContainerRef.current && !mapRef.current) {
-      mapRef.current = L.map(mapContainerRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-      }).setView([20, 0], 2);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(mapRef.current);
-
-      L.control.zoom({ position: 'bottomright' }).addTo(mapRef.current);
-      L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(mapRef.current);
-    }
-
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
+    if (!containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current, { zoomControl: true }).setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(map);
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; };
   }, []);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    const toRemove: L.Layer[] = [];
-    map.eachLayer((layer) => {
-      if (layer instanceof L.Marker || layer instanceof L.Polyline) toRemove.push(layer);
-    });
-    toRemove.forEach(l => map.removeLayer(l));
+    const layers: L.Layer[] = [];
+    map.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline) layers.push(l); });
+    layers.forEach(l => map.removeLayer(l));
 
-    const markers: [number, number][] = [];
+    const points: [number, number][] = [];
 
-    // Driver marker
     if (driverLocation) {
-      const pulseIcon = L.divIcon({
-        html: `<div style="position:relative">
-          <div style="position:absolute;inset:-6px;border-radius:50%;background:rgba(37,99,235,0.2);animation:pulse 2s ease-in-out infinite"></div>
-          <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;border:2.5px solid white;box-shadow:0 2px 8px rgba(37,99,235,0.4);font-size:10px;font-weight:bold;color:white">D</div>
-        </div>`,
-        className: '',
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+      const icon = L.divIcon({
+        html: '<div style="width:22px;height:22px;border-radius:50%;background:#2563eb;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;color:#fff">D</div>',
+        className: '', iconSize: [22, 22], iconAnchor: [11, 11],
       });
-      L.marker([driverLocation.lat, driverLocation.lng], { icon: pulseIcon, zIndexOffset: 1000 })
-        .addTo(map).bindPopup(`<b>${mt.yourLocation}</b>`);
-      markers.push([driverLocation.lat, driverLocation.lng]);
+      L.marker([driverLocation.lat, driverLocation.lng], { icon }).addTo(map).bindPopup(`<b>${mt.yourLocation}</b>`);
+      points.push([driverLocation.lat, driverLocation.lng]);
     }
 
-    // Start marker
     if (startLocation && !driverLocation) {
       const icon = L.divIcon({
-        html: `<div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;border:2.5px solid white;box-shadow:0 2px 8px rgba(245,158,11,0.4);font-size:11px;font-weight:bold;color:white">S</div>`,
-        className: '', iconSize: [24, 24], iconAnchor: [12, 12],
+        html: '<div style="width:22px;height:22px;border-radius:50%;background:#f59e0b;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;color:#fff">S</div>',
+        className: '', iconSize: [22, 22], iconAnchor: [11, 11],
       });
-      L.marker([startLocation.lat, startLocation.lng], { icon, zIndexOffset: 1000 })
-        .addTo(map).bindPopup(`<b>${mt.startLocation}</b>`);
-      markers.push([startLocation.lat, startLocation.lng]);
+      L.marker([startLocation.lat, startLocation.lng], { icon }).addTo(map).bindPopup(`<b>${mt.startLocation}</b>`);
+      points.push([startLocation.lat, startLocation.lng]);
     }
 
-    // Stop markers
     const ordered = [...waypoints].sort((a, b) => a.order - b.order);
     ordered.forEach((wp) => {
-      const color = '#10b981';
       const icon = L.divIcon({
-        html: `<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,${color},#059669);display:flex;align-items:center;justify-content:center;border:2.5px solid white;box-shadow:0 2px 8px rgba(16,185,129,0.4);font-size:11px;font-weight:bold;color:white">${wp.order}</div>`,
-        className: '', iconSize: [26, 26], iconAnchor: [13, 13],
+        html: `<div style="width:24px;height:24px;border-radius:50%;background:#10b981;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:#fff">${wp.order}</div>`,
+        className: '', iconSize: [24, 24], iconAnchor: [12, 12],
       });
       L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon })
         .addTo(map)
-        .bindPopup(`
-          <b>${mt.stop} ${wp.order}: ${wp.customer.name}</b><br/>
-          ${wp.customer.address}<br/>
-          ${mt.estArrival}: ${wp.estimatedArrival}
-        `);
-      markers.push([wp.customer.location.lat, wp.customer.location.lng]);
+        .bindPopup(`<b>${mt.stop} ${wp.order}: ${wp.customer.name}</b><br/>${mt.estArrival}: ${wp.estimatedArrival}`);
+      points.push([wp.customer.location.lat, wp.customer.location.lng]);
     });
 
-    if (markers.length > 0) {
-      map.fitBounds(markers, { padding: [60, 60], maxZoom: 15 });
-    }
+    if (points.length > 0) map.fitBounds(points, { padding: [50, 50], maxZoom: 14 });
 
-    // Polyline
-    const pts: [number, number][] = [];
-    if (driverLocation) pts.push([driverLocation.lat, driverLocation.lng]);
-    else if (startLocation) pts.push([startLocation.lat, startLocation.lng]);
-    ordered.forEach(wp => pts.push([wp.customer.location.lat, wp.customer.location.lng]));
-    if (pts.length >= 2) {
-      L.polyline(pts, { color: '#3b82f6', weight: 4, opacity: 0.6 }).addTo(map);
-      L.polyline(pts, { color: '#3b82f6', weight: 2, opacity: 0.3, dashArray: '8, 8' }).addTo(map);
+    if (points.length >= 2) {
+      L.polyline(points, { color: '#3b82f6', weight: 3, opacity: 0.6 }).addTo(map);
     }
   }, [waypoints, driverLocation, startLocation, mt]);
 
-  return (
-    <div className="relative w-full h-full">
-      <div ref={mapContainerRef} className="w-full h-full" />
-      {/* Inline keyframe for pulse animation */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 0.6; }
-          50% { transform: scale(1.5); opacity: 0; }
-        }
-      `}</style>
-    </div>
-  );
+  return <div ref={containerRef} style={{ height, width: '100%' }} />;
 }
