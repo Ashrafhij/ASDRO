@@ -27,7 +27,9 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
       maxZoom: 19,
     }).addTo(map);
     mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(containerRef.current);
+    return () => { observer.disconnect(); map.remove(); mapRef.current = null; };
   }, []);
 
   useEffect(() => {

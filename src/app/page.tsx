@@ -159,26 +159,18 @@ export default function Home() {
 
       {/* Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Desktop sidebar */}
-        <div className="hidden lg:block w-96 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
-          <div className="p-4 space-y-4">{sidebarContent}</div>
+        {/* Sidebar */}
+        <div className={`${showMap ? 'hidden' : 'flex'} lg:flex w-full lg:w-96 lg:flex-shrink-0 flex-col bg-white border-r border-gray-200 overflow-y-auto`}>
+          <div className="p-4 space-y-4 flex-1">{sidebarContent}</div>
         </div>
-
-        {/* Map + Mobile sidebar area */}
-        <div className="flex-1 relative">
-          {/* Mobile sidebar (overlays map) */}
-          <div className={`lg:hidden absolute inset-0 z-10 bg-white overflow-y-auto ${showMap ? 'hidden' : 'block'}`}>
-            <div className="p-4 space-y-4">{sidebarContent}</div>
-          </div>
-          {/* Map (always rendered, always has dimensions) */}
-          <div className="absolute inset-0">
-            <MapView
-              waypoints={route?.waypoints || []}
-              driverLocation={driverLocation}
-              startLocation={!driverLocation ? startLocation : null}
-              height="100%"
-            />
-          </div>
+        {/* Map */}
+        <div className={`${showMap ? 'flex' : 'hidden'} lg:flex flex-1 relative`}>
+          <MapView
+            waypoints={route?.waypoints || []}
+            driverLocation={driverLocation}
+            startLocation={!driverLocation ? startLocation : null}
+            height="100%"
+          />
         </div>
       </div>
     </div>
