@@ -13,7 +13,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
 export default function Home() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const pt = t.page;
   const ht = t.header;
 
@@ -69,11 +69,11 @@ export default function Home() {
     if (!startLocation && !driverLocation) { setError(pt.setStartingLocation); return; }
     setError(''); setLoading(true);
     try {
-      const result = await optimizeRoute(customers, startLocation || driverLocation!);
+      const result = await optimizeRoute(customers, startLocation || driverLocation!, locale);
       setRoute(result); setSection('route');
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
-  }, [customers, startLocation, driverLocation, pt]);
+  }, [customers, startLocation, driverLocation, locale, pt]);
 
   // Proximity auto-complete: when driver is within 50m of the next stop, mark it done
   useEffect(() => {
@@ -101,8 +101,8 @@ export default function Home() {
     const remaining = customers.filter(c => remainingIds.has(c.id));
     const loc = customers.find(c => c.id === customerId)?.location || driverLocation;
     if (!loc) return;
-    try { setRoute(await optimizeRoute(remaining, loc)); } catch { /* ok */ }
-  }, [customers, completedIds, skippedIds, driverLocation]);
+    try { setRoute(await optimizeRoute(remaining, loc, locale)); } catch { /* ok */ }
+  }, [customers, completedIds, skippedIds, driverLocation, locale]);
 
   const handleSkip = useCallback(async (customerId: string) => {
     const newSkipped = new Set(skippedIds); newSkipped.add(customerId);
@@ -114,8 +114,8 @@ export default function Home() {
     if (remainingIds.size === 0) return;
     const remaining = customers.filter(c => remainingIds.has(c.id));
     if (!driverLocation) return;
-    try { setRoute(await optimizeRoute(remaining, driverLocation)); } catch { /* ok */ }
-  }, [customers, completedIds, skippedIds, driverLocation]);
+    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { /* ok */ }
+  }, [customers, completedIds, skippedIds, driverLocation, locale]);
 
   const handleClear = () => {
     setCustomers([]); setRoute(null); setCompletedIds(new Set());

@@ -35,23 +35,35 @@ function decodePolyline(encoded: string): [number, number][] {
   return points;
 }
 
-function formatInstruction(step: { maneuver: { type: string; modifier?: string }; name: string }): string {
+function formatInstruction(step: { maneuver: { type: string; modifier?: string }; name: string }, locale?: string): string {
   const type = step.maneuver.type;
   const mod = step.maneuver.modifier || '';
   const name = step.name || '';
-  const dirs: Record<string, string> = { left: 'left', right: 'right', straight: 'straight', slight_left: 'slightly left', slight_right: 'slightly right', sharp_left: 'sharp left', sharp_right: 'sharp right', uturn: 'U-turn' };
-  const dir = dirs[mod] || mod;
   if (type === 'depart' || type === 'arrive') return '';
-  if (type === 'turn' || type === 'end of road') return 'Turn ' + dir + (name ? ' onto ' + name : '');
-  if (type === 'continue') return 'Continue' + (name ? ' on ' + name : '');
-  if (type === 'roundabout' || type === 'rotary') return 'Enter roundabout' + (name ? ' at ' + name : '');
-  if (type === 'merge') return 'Merge' + (dir ? ' ' + dir : '') + (name ? ' onto ' + name : '');
-  if (type === 'fork') return 'Keep ' + dir + (name ? ' onto ' + name : '');
-  return (type.charAt(0).toUpperCase() + type.slice(1)) + (dir ? ' ' + dir : '') + (name ? ' onto ' + name : '');
+
+  const en: Record<string, string> = { left: 'left', right: 'right', straight: 'straight', slight_left: 'slightly left', slight_right: 'slightly right', sharp_left: 'sharp left', sharp_right: 'sharp right', uturn: 'U-turn' };
+  const he: Record<string, string> = { left: 'שמאלה', right: 'ימינה', straight: 'ישר', slight_left: 'קלות שמאלה', slight_right: 'קלות ימינה', sharp_left: 'חד שמאלה', sharp_right: 'חד ימינה', uturn: 'פניית פרסה' };
+  const ar: Record<string, string> = { left: 'يسارًا', right: 'يمينًا', straight: 'مباشرة', slight_left: 'يسارًا قليلاً', slight_right: 'يمينًا قليلاً', sharp_left: 'يسارًا بحدة', sharp_right: 'يمينًا بحدة', uturn: 'دوران كامل' };
+  const dirs = locale === 'he' ? he : locale === 'ar' ? ar : en;
+  const dir = dirs[mod] || mod;
+
+  const t = locale === 'he'
+    ? { turn: 'פנה', onto: 'ל', cont: 'המשך', on: 'ב', round: 'היכנס לכיכר', at: 'ב', merge: 'השתלב', keep: 'הישאר', ontoAlt: 'ל' }
+    : locale === 'ar'
+    ? { turn: 'انعطف', onto: 'إلى', cont: 'تابع', on: 'في', round: 'ادخل الدوار', at: 'في', merge: 'اندمج', keep: 'ابق', ontoAlt: 'إلى' }
+    : { turn: 'Turn', onto: ' onto', cont: 'Continue', on: ' on', round: 'Enter roundabout', at: ' at', merge: 'Merge', keep: 'Keep', ontoAlt: ' onto' };
+
+  if (type === 'turn' || type === 'end of road') return `${t.turn} ${dir}${t.onto}${name ? ` ${name}` : ''}`;
+  if (type === 'continue') return `${t.cont}${name ? `${t.on} ${name}` : ''}`;
+  if (type === 'roundabout' || type === 'rotary') return `${t.round}${name ? `${t.at} ${name}` : ''}`;
+  if (type === 'merge') return `${t.merge}${dir ? ` ${dir}` : ''}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
+  if (type === 'fork') return `${t.keep} ${dir}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
+  const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+  return `${typeLabel} ${dir}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
 }
 
-async function getOSRMRoute(start: Location, end: Location): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string } | null> {
-  const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true`;
+async function getOSRMRoute(start: Location, end: Location, locale?: string): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string } | null> {
+  const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true${locale && ['he', 'ar'].includes(locale) ? `&language=${locale}` : ''}`;
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -62,7 +74,7 @@ async function getOSRMRoute(start: Location, end: Location): Promise<{ distance:
     if (route.geometry) geometry = decodePolyline(route.geometry);
     if (route.legs?.[0]?.steps?.length) {
       const first = route.legs[0].steps.find((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart');
-      if (first) instruction = formatInstruction(first);
+      if (first) instruction = formatInstruction(first, locale);
     }
     return {
       distance: route.distance / 1000,
@@ -75,7 +87,7 @@ async function getOSRMRoute(start: Location, end: Location): Promise<{ distance:
   }
 }
 
-async function buildDistanceMatrix(points: Location[]): Promise<{
+async function buildDistanceMatrix(points: Location[], locale?: string): Promise<{
   distances: number[][];
   durations: number[][];
   geometries: ([number, number][] | undefined)[][];
@@ -99,7 +111,7 @@ async function buildDistanceMatrix(points: Location[]): Promise<{
         geometries[i].push(undefined);
         instructions[i].push(undefined);
       } else {
-        const osrm = await getOSRMRoute(points[i], points[j]);
+        const osrm = await getOSRMRoute(points[i], points[j], locale);
         if (osrm) {
           distances[i].push(osrm.distance);
           durations[i].push(osrm.duration);
@@ -182,14 +194,15 @@ function totalDistance(route: number[], distances: number[][]): number {
 
 export async function optimizeRoute(
   customers: Customer[],
-  startLocation: Location
+  startLocation: Location,
+  locale?: string
 ): Promise<OptimizedRoute> {
   if (customers.length === 0) {
     return { waypoints: [], totalDistance: 0, totalDuration: 0 };
   }
 
   const points = [startLocation, ...customers.map(c => c.location)];
-  const { distances, durations, geometries, instructions } = await buildDistanceMatrix(points);
+  const { distances, durations, geometries, instructions } = await buildDistanceMatrix(points, locale);
 
   const available = new Set(Array.from({ length: customers.length }, (_, i) => i + 1));
   const rawRoute = nearestNeighborTSP(distances, 0, available);
