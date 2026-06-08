@@ -13,7 +13,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
 export default function Home() {
-  const { t, locale } = useI18n();
+  const { t, locale, dir } = useI18n();
   const pt = t.page;
   const ht = t.header;
 
@@ -263,23 +263,43 @@ export default function Home() {
           </div>
 
           <div className="absolute top-4 left-4 right-4 z-[1000]">
-            <div className="bg-white rounded-2xl shadow-2xl p-4 space-y-2">
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/40 p-4" dir={dir}>
               {activeWaypoint.nextInstruction && (
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">➡️</span>
-                  <p className="text-base font-semibold text-gray-900 flex-1">{activeWaypoint.nextInstruction}</p>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200/50 flex-shrink-0">
+                    <svg viewBox="0 0 24 24" className="w-6 h-6 fill-white" style={{ transform: dir === 'rtl' ? 'scaleX(-1)' : 'none' }}>
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-bold text-gray-900 leading-snug">{activeWaypoint.nextInstruction}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-sm font-semibold text-gray-700 truncate">{activeWaypoint.customer.name}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="text-xs text-gray-500 truncate">{activeWaypoint.customer.address}</span>
+                    </div>
+                  </div>
                 </div>
               )}
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 font-medium">{activeWaypoint.customer.name}</span>
-                <span className="text-gray-400">{activeWaypoint.customer.address}</span>
-              </div>
+              {!activeWaypoint.nextInstruction && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-200/50 flex-shrink-0">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-base font-bold text-gray-900">{activeWaypoint.customer.name}</p>
+                    <p className="text-xs text-gray-500">{activeWaypoint.customer.address}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Bottom: ETA, distance, stops, Exit */}
           <div className="absolute bottom-6 left-4 right-4 z-[1000]">
-            <div className="bg-white rounded-2xl shadow-2xl p-4 space-y-3">
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/40 p-4 space-y-3" dir={dir}>
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-3xl font-bold text-gray-900">{Math.round(navRemainingTime)} min</p>
@@ -301,7 +321,7 @@ export default function Home() {
 
               <div className="flex items-center gap-2 pt-1">
                 <button onClick={() => setInAppNav(false)}
-                  className="flex-1 py-3 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-all active:scale-[0.98]">
+                  className="flex-1 py-3 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-100/80 transition-all active:scale-[0.98]">
                   Exit Navigation
                 </button>
                 <button onClick={() => {
@@ -314,7 +334,8 @@ export default function Home() {
                     window.open(urls[navApp] || urls.google, '_blank');
                   }
                 }}
-                  className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-200/40 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.98]">
+                  className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-200/40 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.98] flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
                   Open in Maps
                 </button>
               </div>
