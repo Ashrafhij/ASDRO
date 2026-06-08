@@ -45,8 +45,7 @@ export default function Home() {
     setError(''); setLoading(true);
     try {
       const result = await optimizeRoute(customers, startLocation || driverLocation!);
-      setRoute(result); setCompletedIds(new Set()); setSkippedIds(new Set());
-      setSection('route');
+      setRoute(result); setSection('route');
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
   }, [customers, startLocation, driverLocation, pt]);
@@ -116,7 +115,7 @@ export default function Home() {
             className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-gray-50 transition-colors">
             <span className="flex items-center gap-2.5">
               <span className={'w-2 h-2 rounded-full ' + (section === 'route' ? 'bg-blue-500' : 'bg-gray-300')} />
-              <span className="font-semibold text-gray-800">Route</span>
+              <span className="font-semibold text-gray-800">{pt.route}</span>
               <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{route!.waypoints.length}</span>
             </span>
             <svg className={'w-4 h-4 text-gray-400 transition-transform duration-200 ' + (section === 'route' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,7 +142,7 @@ export default function Home() {
             className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-gray-50 transition-colors">
             <span className="flex items-center gap-2.5">
               <span className={'w-2 h-2 rounded-full ' + (section === 'customers' ? 'bg-blue-500' : 'bg-gray-300')} />
-              <span className="font-semibold text-gray-800">Customers</span>
+              <span className="font-semibold text-gray-800">{pt.customers}</span>
               <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{customers.length}</span>
             </span>
             <svg className={'w-4 h-4 text-gray-400 transition-transform duration-200 ' + (section === 'customers' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">

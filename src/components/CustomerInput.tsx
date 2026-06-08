@@ -39,7 +39,10 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
   const addCustomer = async () => {
     if (!name.trim() || !locationInput.trim()) { setError(ct.errorNameLocation); return; }
     setError(''); setParsing(true);
+    const startTime = Date.now();
     const resolved = await resolveLocation(locationInput);
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 400) await new Promise(r => setTimeout(r, 400 - elapsed));
     if (!resolved) { setError(ct.errorLocation); setParsing(false); return; }
     const customer = {
       id: editingId || crypto.randomUUID(), name: name.trim(), phone: phone.trim(),
@@ -67,6 +70,7 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
   const addBulk = async () => {
     if (!bulkInput.trim()) return;
     setError(''); setParsing(true);
+    const startTime = Date.now();
     const lines = bulkInput.split('\n').filter(l => l.trim());
     const results: Customer[] = [];
     for (const line of lines) {
@@ -83,6 +87,8 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
         });
       }
     }
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 400) await new Promise(r => setTimeout(r, 400 - elapsed));
     onChange([...customers, ...results]);
     setBulkInput(''); setParsing(false);
   };
