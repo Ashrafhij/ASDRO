@@ -35,7 +35,15 @@ function cleanPhone(phone: string) {
 function openWhatsApp(phone: string) {
   const cleaned = cleanPhone(phone);
   if (!cleaned) return;
-  window.location.href = 'https://wa.me/' + cleaned;
+  let number = cleaned;
+  if (number.startsWith('0') && number.length === 10) {
+    number = '972' + number.slice(1);
+  }
+  const a = document.createElement('a');
+  a.href = 'https://wa.me/' + number;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  a.click();
 }
 
 type NavPickerKey = keyof Dict['navPicker'];
