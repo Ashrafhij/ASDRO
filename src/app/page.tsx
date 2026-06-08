@@ -84,44 +84,61 @@ export default function Home() {
   };
 
   const hasRoute = route && route.waypoints.length > 0;
-  const [inputExpanded, setInputExpanded] = useState(!hasRoute);
+  const [section, setSection] = useState<'route' | 'customers'>('route');
 
   useEffect(() => {
-    setInputExpanded(!hasRoute);
+    if (hasRoute) setSection('route');
   }, [hasRoute]);
+
+  const routeContent = hasRoute && (
+    <>
+      <RouteList
+        waypoints={route!.waypoints}
+        totalDistance={route!.totalDistance}
+        totalDuration={route!.totalDuration}
+        completedIds={completedIds}
+        skippedIds={skippedIds}
+        onMarkComplete={handleMarkComplete}
+        onSkip={handleSkip}
+      />
+      <button onClick={handleClear}
+        className="w-full py-2.5 text-xs text-gray-400 hover:text-red-500 rounded-xl border border-dashed border-gray-200 hover:border-red-200 transition-all flex items-center justify-center gap-1.5 hover:bg-red-50/50">
+        🗑️ {pt.clearAll}
+      </button>
+    </>
+  );
 
   const sidebarContent = (
     <>
-      {/* Route results first (when active) */}
       {hasRoute && (
-        <>
-          <RouteList
-            waypoints={route!.waypoints}
-            totalDistance={route!.totalDistance}
-            totalDuration={route!.totalDuration}
-            completedIds={completedIds}
-            skippedIds={skippedIds}
-            onMarkComplete={handleMarkComplete}
-            onSkip={handleSkip}
-          />
-          <button onClick={handleClear}
-            className="w-full py-2.5 text-xs text-gray-400 hover:text-red-500 rounded-xl border border-dashed border-gray-200 hover:border-red-200 transition-all flex items-center justify-center gap-1.5 hover:bg-red-50/50">
-            🗑️ {pt.clearAll}
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <button onClick={() => setSection(section === 'route' ? 'customers' : 'route')}
+            className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-gray-50 transition-colors">
+            <span className="flex items-center gap-2.5">
+              <span className={'w-2 h-2 rounded-full ' + (section === 'route' ? 'bg-blue-500' : 'bg-gray-300')} />
+              <span className="font-semibold text-gray-800">Route</span>
+              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{route!.waypoints.length}</span>
+            </span>
+            <svg className={'w-4 h-4 text-gray-400 transition-transform duration-200 ' + (section === 'route' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
-        </>
+          <div className={'overflow-hidden transition-all duration-300 ' + (section === 'route' ? 'max-h-[2000px]' : 'max-h-0')}>
+            <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
+              {routeContent}
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Optimize button (always between route and input) */}
-      {customers.length > 0 && (
-        <button onClick={optimize} disabled={loading || !startLocation}
-          className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-2">
-          {loading ? (
-            <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
-          ) : (
-            <><span className="text-base">{hasRoute ? '🔄' : '🚀'}</span> {hasRoute ? pt.reoptimize : pt.optimizeRoute}</>
-          )}
-        </button>
-      )}
+      <button onClick={optimize} disabled={loading || !startLocation}
+        className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-2.5">
+        {loading ? (
+          <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
+        ) : (
+          <><span className="text-base">{hasRoute ? '🔄' : '🚀'}</span> {hasRoute ? pt.reoptimize : pt.optimizeRoute}</>
+        )}
+      </button>
 
       {error && (
         <div className="bg-red-50 border border-red-100 text-red-600 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
@@ -129,20 +146,29 @@ export default function Home() {
         </div>
       )}
 
-      {/* Customer Input — collapsed when route is active */}
       {hasRoute ? (
-        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-          <button onClick={() => setInputExpanded(!inputExpanded)}
-            className="w-full px-4 py-3 flex items-center justify-between text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors">
-            <span className="flex items-center gap-2">
-              👥 {customers.length} {customers.length === 1 ? 'customer' : 'customers'}
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <button onClick={() => setSection(section === 'customers' ? 'route' : 'customers')}
+            className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-gray-50 transition-colors">
+            <span className="flex items-center gap-2.5">
+              <span className={'w-2 h-2 rounded-full ' + (section === 'customers' ? 'bg-blue-500' : 'bg-gray-300')} />
+              <span className="font-semibold text-gray-800">Customers</span>
+              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{customers.length}</span>
             </span>
-            <span className={'transition-transform ' + (inputExpanded ? 'rotate-180' : '')}>▼</span>
+            <svg className={'w-4 h-4 text-gray-400 transition-transform duration-200 ' + (section === 'customers' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
-          {inputExpanded && <div className="px-4 pb-4 border-t border-gray-100 pt-4"><CustomerInput customers={customers} onChange={setCustomers} /></div>}
+          <div className={'overflow-hidden transition-all duration-300 ' + (section === 'customers' ? 'max-h-[2000px]' : 'max-h-0')}>
+            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+              <CustomerInput customers={customers} onChange={setCustomers} />
+            </div>
+          </div>
         </div>
       ) : (
-        <CustomerInput customers={customers} onChange={setCustomers} />
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <CustomerInput customers={customers} onChange={setCustomers} />
+        </div>
       )}
     </>
   );
