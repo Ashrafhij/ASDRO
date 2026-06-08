@@ -91,13 +91,17 @@ export default function Home() {
 
       {customers.length > 0 && (
         <button onClick={optimize} disabled={loading || !startLocation}
-          className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2">
-          {loading ? '⏳ ' + pt.optimizing : hasRoute ? '🔄 ' + pt.reoptimize : '🚀 ' + pt.optimizeRoute}
+          className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-2">
+          {loading ? (
+            <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
+          ) : (
+            <><span className="text-base">{hasRoute ? '🔄' : '🚀'}</span> {hasRoute ? pt.reoptimize : pt.optimizeRoute}</>
+          )}
         </button>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm flex items-center gap-2">
+        <div className="bg-red-50 border border-red-100 text-red-600 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
           <span>⚠️</span> {error}
         </div>
       )}
@@ -113,7 +117,8 @@ export default function Home() {
             onMarkComplete={handleMarkComplete}
             onSkip={handleSkip}
           />
-          <button onClick={handleClear} className="w-full py-2 text-xs text-gray-500 hover:text-red-600 rounded-xl border border-gray-200 hover:border-red-200 transition-colors flex items-center justify-center gap-1.5">
+          <button onClick={handleClear}
+            className="w-full py-2.5 text-xs text-gray-400 hover:text-red-500 rounded-xl border border-dashed border-gray-200 hover:border-red-200 transition-all flex items-center justify-center gap-1.5 hover:bg-red-50/50">
             🗑️ {pt.clearAll}
           </button>
         </>
@@ -165,7 +170,7 @@ export default function Home() {
             />
           </div>
         ) : (
-          <div className="px-4 pt-4 pb-24 space-y-4 min-h-[calc(100vh-57px)]">
+          <div className="p-5 pb-24 space-y-5 min-h-[calc(100vh-57px)]">
             {sidebarContent}
           </div>
         )}
@@ -174,7 +179,7 @@ export default function Home() {
       {/* Desktop content */}
       <div className="hidden lg:flex flex-1 overflow-hidden">
         <div className="w-96 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
-          <div className="p-4 space-y-4">{sidebarContent}</div>
+          <div className="p-5 space-y-5">{sidebarContent}</div>
         </div>
         <div className="flex-1 relative">
           <MapView
@@ -188,7 +193,7 @@ export default function Home() {
 
       {/* Floating toggle button (mobile) */}
       <button onClick={() => setShowMap(!showMap)}
-        className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-xl font-semibold text-sm flex items-center gap-2 border border-white/20 backdrop-blur-sm transition-all hover:shadow-2xl active:scale-95">
+        className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-2xl shadow-blue-300/30 font-semibold text-sm flex items-center gap-2.5 border border-white/20 backdrop-blur-sm transition-all active:scale-95 hover:shadow-blue-300/50">
         {showMap ? '📋 List' : '🗺️ Map'}
       </button>
     </div>

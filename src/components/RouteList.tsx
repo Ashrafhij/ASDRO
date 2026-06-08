@@ -64,21 +64,21 @@ export default function RouteList({
     <>
       {/* Nav picker bottom sheet */}
       {navLocation && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30" onClick={closePicker}>
-          <div className="w-full max-w-sm bg-white rounded-t-2xl p-4 space-y-2 animate-slide-up shadow-xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-center mb-2">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm" onClick={closePicker}>
+          <div className="w-full max-w-sm bg-white rounded-t-3xl p-5 pb-8 space-y-2 animate-slide-up shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-center mb-3">
               <div className="w-10 h-1 rounded-full bg-gray-300" />
             </div>
-            <p className="text-sm font-semibold text-gray-900 text-center mb-2">{np.title}</p>
+            <p className="text-sm font-semibold text-gray-900 text-center mb-3">{np.title}</p>
             {navApps.map(({ key, labelKey, icon }) => (
               <button key={key} onClick={() => { openNavApp(key, navLocation); closePicker(); }}
-                className="w-full py-3 px-4 text-sm font-medium text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors text-start flex items-center gap-3 active:scale-[0.98]">
-                <span className="text-lg">{icon}</span>
+                className="w-full py-3 px-4 text-sm font-medium text-gray-800 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all text-start flex items-center gap-3 active:scale-[0.98] border border-transparent hover:border-gray-200">
+                <span className="w-9 h-9 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-lg">{icon}</span>
                 <span>{np[labelKey]}</span>
               </button>
             ))}
             <button onClick={closePicker}
-              className="w-full py-3 px-4 text-sm font-medium text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors">
+              className="w-full py-3 px-4 text-sm font-medium text-gray-400 hover:text-gray-600 bg-transparent hover:bg-gray-50 rounded-xl transition-colors">
               {np.cancel}
             </button>
           </div>
@@ -86,22 +86,27 @@ export default function RouteList({
       )}
 
       <div className="space-y-3">
-        {/* Stats bar */}
-        <div className="flex items-center gap-3 text-xs bg-blue-50 rounded-xl px-4 py-3">
-          <span className="flex items-center gap-1">
-            <span>🛣️</span>
-            <span className="font-semibold text-gray-900">{totalDistance.toFixed(1)} {rt.km}</span>
-          </span>
-          <span className="text-blue-200">|</span>
-          <span className="flex items-center gap-1">
-            <span>⏱️</span>
-            <span className="text-gray-700">{totalDuration >= 60 ? `${Math.floor(totalDuration / 60)}h ${Math.round(totalDuration % 60)}m` : `${Math.round(totalDuration)} ${rt.min}`}</span>
-          </span>
-          <span className="text-blue-200">|</span>
-          <span className="flex items-center gap-1">
-            <span>📍</span>
-            <span className="text-gray-700">{activeCount} active{doneCount > 0 ? `, ✅ ${doneCount} done` : ''}{skippedCount > 0 ? `, ⏭️ ${skippedCount} skipped` : ''}</span>
-          </span>
+        {/* Stats cards */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl px-3 py-2.5 shadow-sm">
+            <p className="text-[10px] text-blue-100 font-medium uppercase tracking-wider">Distance</p>
+            <p className="text-lg font-bold text-white mt-0.5">{totalDistance.toFixed(1)} <span className="text-sm font-normal text-blue-200">{rt.km}</span></p>
+          </div>
+          <div className="bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl px-3 py-2.5 shadow-sm">
+            <p className="text-[10px] text-violet-100 font-medium uppercase tracking-wider">Time</p>
+            <p className="text-lg font-bold text-white mt-0.5">
+              {totalDuration >= 60 ? `${Math.floor(totalDuration / 60)}h ${Math.round(totalDuration % 60)}m` : `${Math.round(totalDuration)}`}
+              <span className="text-sm font-normal text-violet-200"> {totalDuration >= 60 ? '' : rt.min}</span>
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl px-3 py-2.5 shadow-sm">
+            <p className="text-[10px] text-emerald-100 font-medium uppercase tracking-wider">Stops</p>
+            <p className="text-lg font-bold text-white mt-0.5">
+              {activeCount}
+              {doneCount > 0 && <span className="text-sm font-normal text-emerald-200"> · {doneCount}✓</span>}
+              {skippedCount > 0 && <span className="text-sm font-normal text-emerald-200"> · {skippedCount}⤵</span>}
+            </p>
+          </div>
         </div>
 
         <div className="space-y-1.5">
@@ -110,42 +115,40 @@ export default function RouteList({
             const isSkipped = skippedIds.has(wp.customer.id);
 
             return (
-              <div key={wp.customer.id} className={`rounded-xl border px-3 py-2.5 transition-all ${
-                isComplete ? 'bg-green-50 border-green-200' :
+              <div key={wp.customer.id} className={`rounded-xl border px-3.5 py-3 transition-all ${
+                isComplete ? 'bg-emerald-50 border-emerald-200' :
                 isSkipped ? 'bg-gray-50 border-gray-200' :
-                'bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm'
+                'bg-white border-gray-100 hover:border-gray-200 hover:shadow-md active:shadow-sm'
               }`}>
-                <div className="flex items-start gap-2.5">
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold text-white shadow-sm ${
-                    isComplete ? 'bg-green-500' : isSkipped ? 'bg-gray-400' : 'bg-gradient-to-br from-blue-600 to-blue-500'
+                <div className="flex items-start gap-3">
+                  <div className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white shadow-sm ${
+                    isComplete ? 'bg-emerald-500' : isSkipped ? 'bg-gray-400' : 'bg-gradient-to-br from-blue-500 to-blue-600'
                   }`}>
-                    {isComplete ? '✅' : isSkipped ? '⏭️' : wp.order}
+                    {isComplete ? '✓' : isSkipped ? '–' : wp.order}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pt-0.5">
                     <div className="flex items-center justify-between">
-                      <span className={`text-sm font-medium flex items-center gap-1 ${isComplete || isSkipped ? 'text-gray-500' : 'text-gray-900'}`}>
-                        <span>👤</span> {wp.customer.name}
+                      <span className={`text-sm font-semibold ${isComplete || isSkipped ? 'text-gray-500' : 'text-gray-900'}`}>
+                        {wp.customer.name}
                       </span>
-                      <span className="text-[10px] text-gray-400 flex items-center gap-0.5">🕐 {rt.arrival} {wp.estimatedArrival}</span>
+                      <span className="text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md font-medium">{rt.arrival} {wp.estimatedArrival}</span>
                     </div>
-                    <p className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
-                      <span>📍</span> {wp.customer.address}
-                    </p>
+                    <p className="text-xs text-gray-400 truncate mt-0.5">{wp.customer.address}</p>
                   </div>
                 </div>
                 {!isComplete && !isSkipped && (
-                  <div className="flex gap-1.5 mt-2 ms-10">
+                  <div className="flex gap-2 mt-3 ms-12">
                     <button onClick={() => setNavLocation(wp.customer.location)}
-                      className="flex-1 px-2.5 py-1.5 bg-blue-600 text-white text-[11px] font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 active:scale-[0.97]">
+                      className="flex-1 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition-all active:scale-[0.97] shadow-sm flex items-center justify-center gap-1.5">
                       🧭 {rt.navigate}
                     </button>
                     <button onClick={() => onMarkComplete(wp.customer.id)}
-                      className="px-2.5 py-1.5 bg-green-600 text-white text-[11px] font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-1 active:scale-[0.97]">
+                      className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-700 transition-all active:scale-[0.97] shadow-sm flex items-center gap-1.5">
                       ✅ {rt.done}
                     </button>
                     <button onClick={() => onSkip(wp.customer.id)}
-                      className="px-2.5 py-1.5 bg-gray-200 text-gray-600 text-[11px] font-medium rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-1 active:scale-[0.97]">
-                      ⏭️ {rt.skip}
+                      className="px-4 py-2 bg-gray-100 text-gray-600 text-xs font-semibold rounded-xl hover:bg-gray-200 transition-all active:scale-[0.97] flex items-center gap-1.5">
+                      ⏭
                     </button>
                   </div>
                 )}
