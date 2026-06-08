@@ -131,15 +131,6 @@ export default function Home() {
         </div>
       )}
 
-      <button onClick={optimize} disabled={loading || !startLocation}
-        className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-2.5">
-        {loading ? (
-          <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
-        ) : (
-          <><span className="text-base">{hasRoute ? '🔄' : '🚀'}</span> {hasRoute ? pt.reoptimize : pt.optimizeRoute}</>
-        )}
-      </button>
-
       {error && (
         <div className="bg-red-50 border border-red-100 text-red-600 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
           <span>⚠️</span> {error}
@@ -169,6 +160,17 @@ export default function Home() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <CustomerInput customers={customers} onChange={setCustomers} />
         </div>
+      )}
+
+      {customers.length > 0 && (
+        <button onClick={optimize} disabled={loading || !startLocation}
+          className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-2.5">
+          {loading ? (
+            <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
+          ) : (
+            <><span className="text-base">{hasRoute ? '🔄' : '🚀'}</span> {hasRoute ? pt.reoptimize : pt.optimizeRoute}</>
+          )}
+        </button>
       )}
     </>
   );
