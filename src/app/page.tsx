@@ -249,7 +249,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* === Full-screen Navigation Mode (Google Maps style) === */}
+      {/* === Full-screen Navigation Mode === */}
       {inAppNav && activeWaypoint ? (
         <div className="fixed inset-0 z-50 overflow-hidden">
           <div className="h-screen w-full">
@@ -262,67 +262,64 @@ export default function Home() {
             />
           </div>
 
-          <div className="absolute top-4 left-4 right-4 z-[1000]">
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/40 p-4" dir={dir}>
-              {activeWaypoint.nextInstruction && (
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200/50 flex-shrink-0">
-                    <svg viewBox="0 0 24 24" className="w-6 h-6 fill-white" style={{ transform: dir === 'rtl' ? 'scaleX(-1)' : 'none' }}>
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-base font-bold text-gray-900 leading-snug">{activeWaypoint.nextInstruction}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-sm font-semibold text-gray-700 truncate">{activeWaypoint.customer.name}</span>
-                      <span className="text-gray-300">·</span>
-                      <span className="text-xs text-gray-500 truncate">{activeWaypoint.customer.address}</span>
-                    </div>
-                  </div>
+          {/* Top instruction chip */}
+          {activeWaypoint.nextInstruction && (
+            <div className="absolute top-6 left-4 right-4 z-[1000] flex justify-center">
+              <div className="inline-flex items-center gap-3 bg-black/50 backdrop-blur-xl rounded-full px-5 py-3 shadow-2xl border border-white/10 max-w-[90%]" dir={dir}>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white" style={{ transform: dir === 'rtl' ? 'scaleX(-1)' : 'none' }}>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
                 </div>
-              )}
-              {!activeWaypoint.nextInstruction && (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-200/50 flex-shrink-0">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-base font-bold text-gray-900">{activeWaypoint.customer.name}</p>
-                    <p className="text-xs text-gray-500">{activeWaypoint.customer.address}</p>
-                  </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-white truncate">{activeWaypoint.nextInstruction}</p>
+                  <p className="text-[11px] text-white/60 truncate">{activeWaypoint.customer.name} · {activeWaypoint.customer.address}</p>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Bottom: ETA, distance, stops, Exit */}
+          {/* Bottom panel */}
           <div className="absolute bottom-6 left-4 right-4 z-[1000]">
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/40 p-4 space-y-3" dir={dir}>
-              <div className="flex items-center justify-between gap-4">
+            <div className="bg-black/60 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/10 p-5 space-y-4" dir={dir}>
+              {/* Primary row — big time + ETA */}
+              <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-3xl font-bold text-gray-900">{Math.round(navRemainingTime)} min</p>
-                  <p className="text-sm text-gray-500 mt-0.5">{navRemainingDist.toFixed(1)} km · {navRemaining.length} {navRemaining.length === 1 ? 'stop' : 'stops'} remaining</p>
+                  <span className="text-5xl font-bold text-white tracking-tight">{Math.round(navRemainingTime)}</span>
+                  <span className="text-lg font-semibold text-white/60 ml-1">min</span>
+                  <p className="text-xs text-white/40 mt-0.5">{navRemainingDist.toFixed(1)} km total</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-semibold text-gray-800">{activeWaypoint.estimatedArrival}</p>
-                  <p className="text-xs text-gray-400">est. arrival</p>
+                  <p className="text-lg font-semibold text-white">{activeWaypoint.estimatedArrival}</p>
+                  <p className="text-[11px] text-white/40">estimated arrival</p>
+                </div>
+              </div>
+
+              {/* Stats chips */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 rounded-xl py-2">
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white/60"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                  <span className="text-xs font-semibold text-white/80">{navRemainingDist.toFixed(1)} km</span>
+                </div>
+                <div className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 rounded-xl py-2">
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white/60"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                  <span className="text-xs font-semibold text-white/80">{navRemaining.length} {navRemaining.length === 1 ? 'stop' : 'stops'}</span>
                 </div>
               </div>
 
               {/* Progress bar */}
               {route && (
-                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500"
+                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-400 to-emerald-400 rounded-full transition-all duration-500"
                     style={{ width: Math.min(100, (completedIds.size / (sortedWps.length || 1)) * 100) + '%' }} />
                 </div>
               )}
 
+              {/* Actions */}
               <div className="flex items-center gap-2 pt-1">
                 <button onClick={() => setInAppNav(false)}
-                  className="flex-1 py-3 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-100/80 transition-all active:scale-[0.98]">
-                  Exit Navigation
+                  className="flex-1 py-3 bg-white/10 text-white/80 text-sm font-semibold rounded-2xl hover:bg-white/20 transition-all active:scale-[0.98]">
+                  Exit
                 </button>
                 <button onClick={() => {
                   if (activeWaypoint) {
@@ -334,9 +331,8 @@ export default function Home() {
                     window.open(urls[navApp] || urls.google, '_blank');
                   }
                 }}
-                  className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-200/40 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.98] flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                  Open in Maps
+                  className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold rounded-2xl shadow-lg shadow-blue-500/30 hover:from-blue-600 hover:to-indigo-700 transition-all active:scale-[0.98]">
+                  Navigate
                 </button>
               </div>
             </div>
