@@ -35,7 +35,7 @@ function cleanPhone(phone: string) {
 function openWhatsApp(phone: string) {
   const cleaned = cleanPhone(phone);
   if (!cleaned) return;
-  window.open('https://api.whatsapp.com/send?phone=' + cleaned + '&text=&app_absent=0', '_blank');
+  window.location.href = 'https://wa.me/' + cleaned;
 }
 
 type NavPickerKey = keyof Dict['navPicker'];
