@@ -18,6 +18,7 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
   const mt = t.map;
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const driverMarkerRef = useRef<L.Marker | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -32,24 +33,21 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
     return () => { observer.disconnect(); map.remove(); mapRef.current = null; };
   }, []);
 
+  // Static layers: stops, polyline, start marker — rebuild when waypoints change
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    const keep: L.Layer[] = [];
+    map.eachLayer(l => {
+      if (l instanceof L.TileLayer) keep.push(l);
+    });
 
-    const layers: L.Layer[] = [];
-    map.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline) layers.push(l); });
-    layers.forEach(l => map.removeLayer(l));
+    // Remove all non-tile layers
+    map.eachLayer(l => {
+      if (!(l instanceof L.TileLayer)) map.removeLayer(l);
+    });
 
     const points: [number, number][] = [];
-
-    if (driverLocation) {
-      const icon = L.divIcon({
-        html: '<div style="width:22px;height:22px;border-radius:50%;background:#2563eb;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;color:#fff">D</div>',
-        className: '', iconSize: [22, 22], iconAnchor: [11, 11],
-      });
-      L.marker([driverLocation.lat, driverLocation.lng], { icon }).addTo(map).bindPopup(`<b>${mt.yourLocation}</b>`);
-      points.push([driverLocation.lat, driverLocation.lng]);
-    }
 
     if (startLocation && !driverLocation) {
       const icon = L.divIcon({
@@ -72,12 +70,42 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
       points.push([wp.customer.location.lat, wp.customer.location.lng]);
     });
 
-    if (points.length > 0) map.fitBounds(points, { padding: [50, 50], maxZoom: 14 });
+    if (driverLocation) {
+      const icon = L.divIcon({
+        html: '<div style="width:22px;height:22px;border-radius:50%;background:#2563eb;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;color:#fff">D</div>',
+        className: '', iconSize: [22, 22], iconAnchor: [11, 11],
+      });
+      const marker = L.marker([driverLocation.lat, driverLocation.lng], { icon }).addTo(map).bindPopup(`<b>${mt.yourLocation}</b>`);
+      driverMarkerRef.current = marker;
+      points.push([driverLocation.lat, driverLocation.lng]);
+    }
 
     if (points.length >= 2) {
       L.polyline(points, { color: '#3b82f6', weight: 3, opacity: 0.6 }).addTo(map);
     }
-  }, [waypoints, driverLocation, startLocation, mt]);
+
+    if (points.length > 0) {
+      map.fitBounds(points, { padding: [50, 50], maxZoom: 14 });
+    }
+  }, [waypoints, startLocation, mt]);
+
+  // Live driver marker update — only moves the existing marker, no full rebuild
+  useEffect(() => {
+    if (!driverLocation) return;
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (driverMarkerRef.current) {
+      driverMarkerRef.current.setLatLng([driverLocation.lat, driverLocation.lng]);
+    } else {
+      const icon = L.divIcon({
+        html: '<div style="width:22px;height:22px;border-radius:50%;background:#2563eb;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;color:#fff">D</div>',
+        className: '', iconSize: [22, 22], iconAnchor: [11, 11],
+      });
+      const marker = L.marker([driverLocation.lat, driverLocation.lng], { icon }).addTo(map).bindPopup(`<b>${mt.yourLocation}</b>`);
+      driverMarkerRef.current = marker;
+    }
+  }, [driverLocation, mt]);
 
   return <div ref={containerRef} style={{ height, width: '100%' }} />;
 }

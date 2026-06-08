@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Customer, Location, OptimizedRoute } from '@/lib/types';
 import { optimizeRoute } from '@/lib/optimizer';
-import { getDriverLocation } from '@/lib/api';
+import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
 import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
@@ -51,6 +51,11 @@ export default function Home() {
     getDriverLocation()
       .then((loc) => { setDriverLocation(loc); setStartLocation(loc); setLocating(false); })
       .catch(() => setLocating(false));
+    const stopWatching = watchDriverLocation(
+      (loc) => setDriverLocation(loc),
+      () => {}
+    );
+    return stopWatching;
   }, []);
 
   const optimize = useCallback(async () => {
@@ -63,6 +68,21 @@ export default function Home() {
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
   }, [customers, startLocation, driverLocation, pt]);
+
+  // Proximity auto-complete: when driver is within 50m of the next stop, mark it done
+  useEffect(() => {
+    if (!driverLocation || !route) return;
+    const sorted = [...route.waypoints].sort((a, b) => a.order - b.order);
+    const nextStop = sorted.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
+    if (!nextStop) return;
+    const R = 6371000;
+    const dLat = (nextStop.customer.location.lat - driverLocation.lat) * Math.PI / 180;
+    const dLng = (nextStop.customer.location.lng - driverLocation.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(driverLocation.lat * Math.PI / 180) * Math.cos(nextStop.customer.location.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    if (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) < 50) {
+      setCompletedIds(prev => { const n = new Set(prev); n.add(nextStop.customer.id); return n; });
+    }
+  }, [driverLocation, route, completedIds, skippedIds]);
 
   const handleMarkComplete = useCallback(async (customerId: string) => {
     const newCompleted = new Set(completedIds); newCompleted.add(customerId);
