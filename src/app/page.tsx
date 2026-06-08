@@ -39,6 +39,9 @@ export default function Home() {
   const hasRoute = route && route.waypoints.length > 0;
   const sortedWps = hasRoute ? [...route!.waypoints].sort((a, b) => a.order - b.order) : [];
   const activeWaypoint = sortedWps.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
+  const navRemaining = activeWaypoint ? sortedWps.slice(sortedWps.indexOf(activeWaypoint)) : [];
+  const navRemainingDist = navRemaining.reduce((s, w) => s + w.distanceFromPrevious, 0);
+  const navRemainingTime = navRemaining.reduce((s, w) => s + w.timeFromPrevious, 0);
   const [section, setSection] = useState<'route' | 'customers'>('route');
 
   useEffect(() => { save('customers', customers); }, [customers]);
@@ -246,76 +249,118 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Mobile content */}
-      <div className="lg:hidden">
-        {showMap ? (
-          <div className="sticky top-[57px] h-[calc(100vh-57px)]">
-            {inAppNav && activeWaypoint && (
-              <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 shadow-xl flex items-center gap-3">
-                <span className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">{activeWaypoint.order}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{activeWaypoint.customer.name} — {activeWaypoint.customer.address}</p>
-                  {activeWaypoint.nextInstruction && (
-                    <p className="text-xs text-blue-200 mt-0.5">➡ {activeWaypoint.nextInstruction}</p>
-                  )}
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs text-blue-200">{activeWaypoint.distanceFromPrevious} km</p>
-                  <p className="text-xs text-blue-300">{activeWaypoint.timeFromPrevious} min</p>
-                </div>
-                <button onClick={() => setInAppNav(false)} className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-white text-xs hover:bg-white/25 transition-colors">✕</button>
-              </div>
-            )}
-            <MapView
-              waypoints={route?.waypoints || []}
-              driverLocation={driverLocation}
-              startLocation={!driverLocation ? startLocation : null}
-              height="100%"
-            />
-          </div>
-        ) : (
-          <div className="p-5 pb-24 space-y-5 min-h-[calc(100vh-57px)]">
-            {sidebarContent}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop content */}
-      <div className="hidden lg:flex flex-1 overflow-hidden">
-        <div className="w-96 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
-          <div className="p-5 space-y-5">{sidebarContent}</div>
-        </div>
-        <div className="flex-1 relative">
-          {inAppNav && activeWaypoint && (
-            <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 shadow-xl flex items-center gap-3">
-              <span className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">{activeWaypoint.order}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{activeWaypoint.customer.name} — {activeWaypoint.customer.address}</p>
-                {activeWaypoint.nextInstruction && (
-                  <p className="text-xs text-blue-200 mt-0.5">➡ {activeWaypoint.nextInstruction}</p>
-                )}
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-xs text-blue-200">{activeWaypoint.distanceFromPrevious} km</p>
-                <p className="text-xs text-blue-300">{activeWaypoint.timeFromPrevious} min</p>
-              </div>
-              <button onClick={() => setInAppNav(false)} className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-white text-xs hover:bg-white/25 transition-colors">✕</button>
-            </div>
-          )}
+      {/* === Full-screen Navigation Mode (Google Maps style) === */}
+      {inAppNav && activeWaypoint ? (
+        <div className="fixed inset-0 z-50 bg-black">
           <MapView
             waypoints={route?.waypoints || []}
             driverLocation={driverLocation}
             startLocation={!driverLocation ? startLocation : null}
             height="100%"
           />
-        </div>
-      </div>
 
-      {/* Floating toggle button (mobile) */}
-      <button onClick={() => setShowMap(!showMap)}
-        className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-2xl shadow-blue-300/30 font-semibold text-sm flex items-center gap-2.5 border border-white/20 backdrop-blur-sm transition-all active:scale-95 hover:shadow-blue-300/50">
-        {showMap ? '📋 List' : '🗺️ Map'}
-      </button>
+          {/* Top: Next instruction card */}
+          <div className="absolute top-4 left-4 right-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-4 space-y-2">
+              {activeWaypoint.nextInstruction && (
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">➡️</span>
+                  <p className="text-base font-semibold text-gray-900 flex-1">{activeWaypoint.nextInstruction}</p>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 font-medium">{activeWaypoint.customer.name}</span>
+                <span className="text-gray-400">{activeWaypoint.customer.address}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom: ETA, distance, stops, Exit */}
+          <div className="absolute bottom-6 left-4 right-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">{Math.round(navRemainingTime)} min</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{navRemainingDist.toFixed(1)} km · {navRemaining.length} {navRemaining.length === 1 ? 'stop' : 'stops'} remaining</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-semibold text-gray-800">{activeWaypoint.estimatedArrival}</p>
+                  <p className="text-xs text-gray-400">est. arrival</p>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              {route && (
+                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500"
+                    style={{ width: Math.min(100, (completedIds.size / (sortedWps.length || 1)) * 100) + '%' }} />
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <button onClick={() => setInAppNav(false)}
+                  className="flex-1 py-3 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-all active:scale-[0.98]">
+                  Exit Navigation
+                </button>
+                <button onClick={() => {
+                  if (activeWaypoint) {
+                    const navApp = (localStorage.getItem('asdro-default-nav') || 'google') as string;
+                    const urls: Record<string, string> = {
+                      google: 'https://www.google.com/maps/dir/?api=1&destination=' + activeWaypoint.customer.location.lat + ',' + activeWaypoint.customer.location.lng + '&travelmode=driving',
+                      waze: 'https://waze.com/ul?ll=' + activeWaypoint.customer.location.lat + ',' + activeWaypoint.customer.location.lng + '&navigate=yes&zoom=14',
+                    };
+                    window.open(urls[navApp] || urls.google, '_blank');
+                  }
+                }}
+                  className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-200/40 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.98]">
+                  Open in Maps
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Mobile content */}
+          <div className="lg:hidden">
+            {showMap ? (
+              <div className="sticky top-[57px] h-[calc(100vh-57px)]">
+                <MapView
+                  waypoints={route?.waypoints || []}
+                  driverLocation={driverLocation}
+                  startLocation={!driverLocation ? startLocation : null}
+                  height="100%"
+                />
+              </div>
+            ) : (
+              <div className="p-5 pb-24 space-y-5 min-h-[calc(100vh-57px)]">
+                {sidebarContent}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop content */}
+          <div className="hidden lg:flex flex-1 overflow-hidden">
+            <div className="w-96 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+              <div className="p-5 space-y-5">{sidebarContent}</div>
+            </div>
+            <div className="flex-1 relative">
+              <MapView
+                waypoints={route?.waypoints || []}
+                driverLocation={driverLocation}
+                startLocation={!driverLocation ? startLocation : null}
+                height="100%"
+              />
+            </div>
+          </div>
+
+          {/* Floating toggle button (mobile) */}
+          <button onClick={() => setShowMap(!showMap)}
+            className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-2xl shadow-blue-300/30 font-semibold text-sm flex items-center gap-2.5 border border-white/20 backdrop-blur-sm transition-all active:scale-95 hover:shadow-blue-300/50">
+            {showMap ? '📋 List' : '🗺️ Map'}
+          </button>
+        </>
+      )}
     </div>
   );
 }
