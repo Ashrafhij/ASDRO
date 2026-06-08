@@ -21,6 +21,7 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
   const [showBulk, setShowBulk] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [error, setError] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const resolveLocation = async (input: string): Promise<{ location: Location; address: string } | null> => {
     const trimmed = input.trim();
@@ -40,12 +41,27 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
     setError(''); setParsing(true);
     const resolved = await resolveLocation(locationInput);
     if (!resolved) { setError(ct.errorLocation); setParsing(false); return; }
-    onChange([...customers, {
-      id: crypto.randomUUID(), name: name.trim(), phone: phone.trim(),
+    const customer = {
+      id: editingId || crypto.randomUUID(), name: name.trim(), phone: phone.trim(),
       location: resolved.location, address: resolved.address, notes: notes.trim(),
-    }]);
+    };
+    if (editingId) {
+      onChange(customers.map(c => c.id === editingId ? customer : c));
+    } else {
+      onChange([...customers, customer]);
+    }
     setName(''); setPhone(''); setLocationInput(''); setNotes('');
-    setParsing(false);
+    setEditingId(null); setParsing(false);
+  };
+
+  const startEdit = (c: Customer) => {
+    setName(c.name); setPhone(c.phone); setLocationInput(c.address);
+    setNotes(c.notes); setEditingId(c.id); setShowBulk(false); setError('');
+  };
+
+  const cancelEdit = () => {
+    setName(''); setPhone(''); setLocationInput(''); setNotes('');
+    setEditingId(null); setError('');
   };
 
   const addBulk = async () => {
@@ -123,14 +139,22 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
               onChange={e => setNotes(e.target.value)}
               className="w-full ps-10 pe-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none" />
           </div>
-          <button onClick={addCustomer} disabled={parsing}
-            className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2">
-            {parsing ? (
-              <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {ct.adding}</span>
-            ) : (
-              <><span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">+</span> {ct.add}</>
+          <div className="flex gap-2">
+            {editingId && (
+              <button onClick={cancelEdit}
+                className="px-4 py-2.5 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all active:scale-[0.98]">
+                {ct.cancel}
+              </button>
             )}
-          </button>
+            <button onClick={addCustomer} disabled={parsing}
+              className={'py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 ' + (editingId ? 'flex-1' : 'w-full')}>
+              {parsing ? (
+                <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {ct.adding}</span>
+              ) : (
+                <><span className={'w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs'}>{editingId ? '✓' : '+'}</span> {editingId ? ct.save : ct.add}</>
+              )}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -160,11 +184,11 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
           </p>
           <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
             {customers.map((c, i) => (
-              <div key={c.id} className="flex items-center gap-3 bg-white border border-gray-100 hover:border-gray-200 px-3 py-2.5 rounded-xl text-sm group transition-all shadow-sm hover:shadow">
+              <div key={c.id} className="flex items-center gap-2 bg-white border border-gray-100 hover:border-gray-200 px-3 py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow">
                 <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-[11px] font-bold flex items-center justify-center shadow-sm">
                   {i + 1}
                 </span>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => startEdit(c)}>
                   <span className="font-medium text-gray-900 text-sm flex items-center gap-1.5">
                     {c.name}
                     {c.phone && <span className="text-xs text-gray-400 font-normal">· {c.phone}</span>}
@@ -173,8 +197,12 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
                     {c.address}
                   </p>
                 </div>
-                <button onClick={() => removeCustomer(c.id)}
-                  className="flex-shrink-0 w-7 h-7 rounded-lg opacity-0 group-hover:opacity-100 bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 transition-all flex items-center justify-center text-xs active:scale-90">
+                <button onClick={(e) => { e.stopPropagation(); startEdit(c); }}
+                  className="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-100 hover:bg-blue-100 text-gray-400 hover:text-blue-600 transition-all flex items-center justify-center text-xs active:scale-90">
+                  ✏️
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); removeCustomer(c.id); }}
+                  className="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 transition-all flex items-center justify-center text-xs active:scale-90">
                   ✕
                 </button>
               </div>

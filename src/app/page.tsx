@@ -26,6 +26,12 @@ export default function Home() {
   const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
   const [locating, setLocating] = useState(true);
   const [showMap, setShowMap] = useState(false);
+  const hasRoute = route && route.waypoints.length > 0;
+  const [section, setSection] = useState<'route' | 'customers'>('route');
+
+  useEffect(() => {
+    if (hasRoute) setSection('route');
+  }, [hasRoute]);
 
   useEffect(() => {
     getDriverLocation()
@@ -40,6 +46,7 @@ export default function Home() {
     try {
       const result = await optimizeRoute(customers, startLocation || driverLocation!);
       setRoute(result); setCompletedIds(new Set()); setSkippedIds(new Set());
+      setSection('route');
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
   }, [customers, startLocation, driverLocation, pt]);
@@ -82,13 +89,6 @@ export default function Home() {
       .then((loc) => { setDriverLocation(loc); setStartLocation(loc); setLocating(false); })
       .catch(() => { setError(pt.gpsError); setLocating(false); });
   };
-
-  const hasRoute = route && route.waypoints.length > 0;
-  const [section, setSection] = useState<'route' | 'customers'>('route');
-
-  useEffect(() => {
-    if (hasRoute) setSection('route');
-  }, [hasRoute]);
 
   const routeContent = hasRoute && (
     <>
