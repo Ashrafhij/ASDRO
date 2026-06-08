@@ -18,6 +18,8 @@ export interface Waypoint {
   estimatedArrival: string;
   distanceFromPrevious: number;
   timeFromPrevious: number;
+  legGeometry?: [number, number][];
+  nextInstruction?: string;
 }
 
 export interface OptimizedRoute {

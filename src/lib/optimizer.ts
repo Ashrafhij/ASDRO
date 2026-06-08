@@ -18,16 +18,57 @@ function haversineDistance(a: Location, b: Location): number {
   return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-async function getOSRMRoute(start: Location, end: Location): Promise<{ distance: number; duration: number } | null> {
-  const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=false`;
+function decodePolyline(encoded: string): [number, number][] {
+  const points: [number, number][] = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let result = 0, shift = 0, b;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lat += dlat;
+    result = 0; shift = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lng += dlng;
+    points.push([lat * 1e-5, lng * 1e-5]);
+  }
+  return points;
+}
+
+function formatInstruction(step: { maneuver: { type: string; modifier?: string }; name: string }): string {
+  const type = step.maneuver.type;
+  const mod = step.maneuver.modifier || '';
+  const name = step.name || '';
+  const dirs: Record<string, string> = { left: 'left', right: 'right', straight: 'straight', slight_left: 'slightly left', slight_right: 'slightly right', sharp_left: 'sharp left', sharp_right: 'sharp right', uturn: 'U-turn' };
+  const dir = dirs[mod] || mod;
+  if (type === 'depart' || type === 'arrive') return '';
+  if (type === 'turn' || type === 'end of road') return 'Turn ' + dir + (name ? ' onto ' + name : '');
+  if (type === 'continue') return 'Continue' + (name ? ' on ' + name : '');
+  if (type === 'roundabout' || type === 'rotary') return 'Enter roundabout' + (name ? ' at ' + name : '');
+  if (type === 'merge') return 'Merge' + (dir ? ' ' + dir : '') + (name ? ' onto ' + name : '');
+  if (type === 'fork') return 'Keep ' + dir + (name ? ' onto ' + name : '');
+  return (type.charAt(0).toUpperCase() + type.slice(1)) + (dir ? ' ' + dir : '') + (name ? ' onto ' + name : '');
+}
+
+async function getOSRMRoute(start: Location, end: Location): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string } | null> {
+  const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true`;
   try {
     const res = await fetch(url);
     const data = await res.json();
     if (data.code !== 'Ok' || !data.routes?.length) return null;
     const route = data.routes[0];
+    let geometry: [number, number][] | undefined;
+    let instruction: string | undefined;
+    if (route.geometry) geometry = decodePolyline(route.geometry);
+    if (route.legs?.[0]?.steps?.length) {
+      const first = route.legs[0].steps.find((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart');
+      if (first) instruction = formatInstruction(first);
+    }
     return {
       distance: route.distance / 1000,
-      duration: route.duration / 60
+      duration: route.duration / 60,
+      geometry,
+      instruction,
     };
   } catch {
     return null;
@@ -37,33 +78,45 @@ async function getOSRMRoute(start: Location, end: Location): Promise<{ distance:
 async function buildDistanceMatrix(points: Location[]): Promise<{
   distances: number[][];
   durations: number[][];
+  geometries: ([number, number][] | undefined)[][];
+  instructions: (string | undefined)[][];
 }> {
   const n = points.length;
   const distances: number[][] = [];
   const durations: number[][] = [];
+  const geometries: ([number, number][] | undefined)[][] = [];
+  const instructions: (string | undefined)[][] = [];
 
   for (let i = 0; i < n; i++) {
     distances.push([]);
     durations.push([]);
+    geometries.push([]);
+    instructions.push([]);
     for (let j = 0; j < n; j++) {
       if (i === j) {
         distances[i].push(0);
         durations[i].push(0);
+        geometries[i].push(undefined);
+        instructions[i].push(undefined);
       } else {
         const osrm = await getOSRMRoute(points[i], points[j]);
         if (osrm) {
           distances[i].push(osrm.distance);
           durations[i].push(osrm.duration);
+          geometries[i].push(osrm.geometry);
+          instructions[i].push(osrm.instruction);
         } else {
           const d = haversineDistance(points[i], points[j]);
           distances[i].push(d);
           durations[i].push((d / 40) * 60);
+          geometries[i].push(undefined);
+          instructions[i].push(undefined);
         }
       }
     }
   }
 
-  return { distances, durations };
+  return { distances, durations, geometries, instructions };
 }
 
 function nearestNeighborTSP(
@@ -136,7 +189,7 @@ export async function optimizeRoute(
   }
 
   const points = [startLocation, ...customers.map(c => c.location)];
-  const { distances, durations } = await buildDistanceMatrix(points);
+  const { distances, durations, geometries, instructions } = await buildDistanceMatrix(points);
 
   const available = new Set(Array.from({ length: customers.length }, (_, i) => i + 1));
   const rawRoute = nearestNeighborTSP(distances, 0, available);
@@ -169,7 +222,9 @@ export async function optimizeRoute(
         minute: '2-digit'
       }),
       distanceFromPrevious: parseFloat(dist.toFixed(1)),
-      timeFromPrevious: parseFloat(dur.toFixed(1))
+      timeFromPrevious: parseFloat(dur.toFixed(1)),
+      legGeometry: geometries[prevIdx][currIdx],
+      nextInstruction: instructions[prevIdx][currIdx],
     });
   }
 

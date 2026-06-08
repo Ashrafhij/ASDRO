@@ -169,6 +169,12 @@ export default function RouteList({
               <div className="flex-1 min-w-0 pt-1">
                 <h3 className="text-lg font-bold text-white">{currentStop.customer.name}</h3>
                 <p className="text-sm text-blue-200 truncate mt-0.5">{currentStop.customer.address}</p>
+                {currentStop.nextInstruction && (
+                  <p className="text-xs text-blue-100 mt-2 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-white/15 flex items-center justify-center text-[9px]">➡️</span>
+                    {currentStop.nextInstruction}
+                  </p>
+                )}
                 {currentStop.customer.phone && (
                   <div className="flex gap-2 mt-2">
                     <a href={'tel:' + currentStop.customer.phone}
