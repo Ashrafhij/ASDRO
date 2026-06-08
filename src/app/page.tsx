@@ -251,16 +251,17 @@ export default function Home() {
 
       {/* === Full-screen Navigation Mode (Google Maps style) === */}
       {inAppNav && activeWaypoint ? (
-        <div className="fixed inset-0 z-50 bg-black">
-          <MapView
-            waypoints={route?.waypoints || []}
-            driverLocation={driverLocation}
-            startLocation={!driverLocation ? startLocation : null}
-            height="100%"
-          />
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div className="h-screen w-full">
+            <MapView
+              waypoints={route?.waypoints || []}
+              driverLocation={driverLocation}
+              startLocation={!driverLocation ? startLocation : null}
+              height="100%"
+            />
+          </div>
 
-          {/* Top: Next instruction card */}
-          <div className="absolute top-4 left-4 right-4">
+          <div className="absolute top-4 left-4 right-4 z-10">
             <div className="bg-white rounded-2xl shadow-2xl p-4 space-y-2">
               {activeWaypoint.nextInstruction && (
                 <div className="flex items-center gap-3">
