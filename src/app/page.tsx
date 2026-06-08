@@ -258,6 +258,7 @@ export default function Home() {
               driverLocation={driverLocation}
               startLocation={!driverLocation ? startLocation : null}
               height="100%"
+              followDriver
             />
           </div>
 
