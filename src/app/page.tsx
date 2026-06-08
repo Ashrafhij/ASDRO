@@ -35,7 +35,10 @@ export default function Home() {
   const [skippedIds, setSkippedIds] = useState<Set<string>>(() => new Set(load<string[]>('skipped', [])));
   const [locating, setLocating] = useState(true);
   const [showMap, setShowMap] = useState(false);
+  const [inAppNav, setInAppNav] = useState(false);
   const hasRoute = route && route.waypoints.length > 0;
+  const sortedWps = hasRoute ? [...route!.waypoints].sort((a, b) => a.order - b.order) : [];
+  const activeWaypoint = sortedWps.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
   const [section, setSection] = useState<'route' | 'customers'>('route');
 
   useEffect(() => { save('customers', customers); }, [customers]);
@@ -113,8 +116,10 @@ export default function Home() {
 
   const handleClear = () => {
     setCustomers([]); setRoute(null); setCompletedIds(new Set());
-    setSkippedIds(new Set()); setError('');
+    setSkippedIds(new Set()); setError(''); setInAppNav(false);
   };
+
+  const handleInAppNav = () => { setInAppNav(true); setShowMap(true); };
 
   const handleLocate = () => {
     setLocating(true);
@@ -133,6 +138,7 @@ export default function Home() {
         skippedIds={skippedIds}
         onMarkComplete={handleMarkComplete}
         onSkip={handleSkip}
+        onNavigateInApp={handleInAppNav}
       />
       <button onClick={handleClear}
         className="w-full py-2.5 text-xs text-gray-400 hover:text-red-500 rounded-xl border border-dashed border-gray-200 hover:border-red-200 transition-all flex items-center justify-center gap-1.5 hover:bg-red-50/50">
@@ -244,6 +250,22 @@ export default function Home() {
       <div className="lg:hidden">
         {showMap ? (
           <div className="sticky top-[57px] h-[calc(100vh-57px)]">
+            {inAppNav && activeWaypoint && (
+              <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 shadow-xl flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">{activeWaypoint.order}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{activeWaypoint.customer.name} — {activeWaypoint.customer.address}</p>
+                  {activeWaypoint.nextInstruction && (
+                    <p className="text-xs text-blue-200 mt-0.5">➡ {activeWaypoint.nextInstruction}</p>
+                  )}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs text-blue-200">{activeWaypoint.distanceFromPrevious} km</p>
+                  <p className="text-xs text-blue-300">{activeWaypoint.timeFromPrevious} min</p>
+                </div>
+                <button onClick={() => setInAppNav(false)} className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-white text-xs hover:bg-white/25 transition-colors">✕</button>
+              </div>
+            )}
             <MapView
               waypoints={route?.waypoints || []}
               driverLocation={driverLocation}
@@ -264,6 +286,22 @@ export default function Home() {
           <div className="p-5 space-y-5">{sidebarContent}</div>
         </div>
         <div className="flex-1 relative">
+          {inAppNav && activeWaypoint && (
+            <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 shadow-xl flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">{activeWaypoint.order}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{activeWaypoint.customer.name} — {activeWaypoint.customer.address}</p>
+                {activeWaypoint.nextInstruction && (
+                  <p className="text-xs text-blue-200 mt-0.5">➡ {activeWaypoint.nextInstruction}</p>
+                )}
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-xs text-blue-200">{activeWaypoint.distanceFromPrevious} km</p>
+                <p className="text-xs text-blue-300">{activeWaypoint.timeFromPrevious} min</p>
+              </div>
+              <button onClick={() => setInAppNav(false)} className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-white text-xs hover:bg-white/25 transition-colors">✕</button>
+            </div>
+          )}
           <MapView
             waypoints={route?.waypoints || []}
             driverLocation={driverLocation}

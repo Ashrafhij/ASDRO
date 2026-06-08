@@ -13,17 +13,20 @@ interface RouteListProps {
   skippedIds: Set<string>;
   onMarkComplete: (customerId: string) => void;
   onSkip: (customerId: string) => void;
+  onNavigateInApp?: (location: Location) => void;
 }
 
-type NavApp = 'google' | 'waze' | 'apple' | 'osm';
+type NavApp = 'google' | 'waze' | 'apple' | 'osm' | 'app';
 
 function openNavApp(app: NavApp, location: Location) {
+  if (app === 'app') return;
   const latlng = location.lat + ',' + location.lng;
   const urls: Record<NavApp, string> = {
     google: 'https://www.google.com/maps/dir/?api=1&destination=' + latlng + '&travelmode=driving',
     waze: 'https://waze.com/ul?ll=' + latlng + '&navigate=yes&zoom=14',
     apple: 'https://maps.apple.com/?daddr=' + latlng + '&dirflg=d',
     osm: 'https://www.openstreetmap.org/directions?from=&to=' + latlng,
+    app: '',
   };
   window.open(urls[app], '_blank');
 }
@@ -52,12 +55,13 @@ const navApps: { key: NavApp; labelKey: NavPickerKey; icon: string }[] = [
   { key: 'waze', labelKey: 'waze', icon: 'W' },
   { key: 'apple', labelKey: 'appleMaps', icon: 'A' },
   { key: 'osm', labelKey: 'osm', icon: 'O' },
+  { key: 'app', labelKey: 'inApp', icon: '📍' },
 ];
 
 const STORAGE_KEY = 'asdro-default-nav';
 
 export default function RouteList({
-  waypoints, totalDistance, totalDuration, completedIds, skippedIds, onMarkComplete, onSkip,
+  waypoints, totalDistance, totalDuration, completedIds, skippedIds, onMarkComplete, onSkip, onNavigateInApp,
 }: RouteListProps) {
   const { t } = useI18n();
   const np = t.navPicker;
@@ -74,13 +78,18 @@ export default function RouteList({
   const closePicker = useCallback(() => { setNavLocation(null); setRememberChoice(false); }, []);
 
   const handleNavSelect = useCallback((app: NavApp, location: Location) => {
+    if (app === 'app') {
+      onNavigateInApp?.(location);
+      closePicker();
+      return;
+    }
     if (rememberChoice) {
       localStorage.setItem(STORAGE_KEY, app);
       setDefaultNav(app);
     }
     openNavApp(app, location);
     closePicker();
-  }, [rememberChoice, closePicker]);
+  }, [rememberChoice, closePicker, onNavigateInApp]);
 
   const clearDefault = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
@@ -169,12 +178,6 @@ export default function RouteList({
               <div className="flex-1 min-w-0 pt-1">
                 <h3 className="text-lg font-bold text-white">{currentStop.customer.name}</h3>
                 <p className="text-sm text-blue-200 truncate mt-0.5">{currentStop.customer.address}</p>
-                {currentStop.nextInstruction && (
-                  <p className="text-xs text-blue-100 mt-2 flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-white/15 flex items-center justify-center text-[9px]">➡️</span>
-                    {currentStop.nextInstruction}
-                  </p>
-                )}
                 {currentStop.customer.phone && (
                   <div className="flex gap-2 mt-2">
                     <a href={'tel:' + currentStop.customer.phone}
