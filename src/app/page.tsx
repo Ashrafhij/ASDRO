@@ -261,7 +261,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="absolute top-4 left-4 right-4 z-10">
+          <div className="absolute top-4 left-4 right-4 z-[1000]">
             <div className="bg-white rounded-2xl shadow-2xl p-4 space-y-2">
               {activeWaypoint.nextInstruction && (
                 <div className="flex items-center gap-3">
@@ -277,7 +277,7 @@ export default function Home() {
           </div>
 
           {/* Bottom: ETA, distance, stops, Exit */}
-          <div className="absolute bottom-6 left-4 right-4">
+          <div className="absolute bottom-6 left-4 right-4 z-[1000]">
             <div className="bg-white rounded-2xl shadow-2xl p-4 space-y-3">
               <div className="flex items-center justify-between gap-4">
                 <div>
