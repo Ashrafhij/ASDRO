@@ -16,18 +16,32 @@ export default function Home() {
   const { t } = useI18n();
   const pt = t.page;
   const ht = t.header;
-  const [customers, setCustomers] = useState<Customer[]>([]);
+
+  const load = <T,>(key: string, fallback: T): T => {
+    if (typeof window === 'undefined') return fallback;
+    try { const v = localStorage.getItem('asdro-' + key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+  };
+  const save = (key: string, val: unknown) => {
+    try { localStorage.setItem('asdro-' + key, JSON.stringify(val)); } catch { /* ignore */ }
+  };
+
+  const [customers, setCustomers] = useState<Customer[]>(() => load('customers', []));
   const [driverLocation, setDriverLocation] = useState<Location | null>(null);
   const [startLocation, setStartLocation] = useState<Location | null>(null);
-  const [route, setRoute] = useState<OptimizedRoute | null>(null);
+  const [route, setRoute] = useState<OptimizedRoute | null>(() => load('route', null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
+  const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set(load<string[]>('completed', [])));
+  const [skippedIds, setSkippedIds] = useState<Set<string>>(() => new Set(load<string[]>('skipped', [])));
   const [locating, setLocating] = useState(true);
   const [showMap, setShowMap] = useState(false);
   const hasRoute = route && route.waypoints.length > 0;
   const [section, setSection] = useState<'route' | 'customers'>('route');
+
+  useEffect(() => { save('customers', customers); }, [customers]);
+  useEffect(() => { save('route', route); }, [route]);
+  useEffect(() => { save('completed', [...completedIds]); }, [completedIds]);
+  useEffect(() => { save('skipped', [...skippedIds]); }, [skippedIds]);
 
   useEffect(() => {
     if (hasRoute) setSection('route');
