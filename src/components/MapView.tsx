@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Location, Waypoint } from '@/lib/types';
 import { useI18n } from '@/lib/i18n-context';
+
+export interface MapViewRef {
+  recenter: (lat: number, lng: number) => void;
+}
 
 interface MapViewProps {
   waypoints: Waypoint[];
@@ -12,16 +16,23 @@ interface MapViewProps {
   startLocation: Location | null;
   height?: string;
   followDriver?: boolean;
+  onManualPan?: () => void;
 }
 
-export default function MapView({ waypoints, driverLocation, startLocation, height = '100%', followDriver }: MapViewProps) {
+export default forwardRef<MapViewRef, MapViewProps>(function MapView({ waypoints, driverLocation, startLocation, height = '100%', followDriver, onManualPan }, ref) {
   const { t } = useI18n();
   const mt = t.map;
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const driverMarkerRef = useRef<L.Marker | null>(null);
-  const [showRecenter, setShowRecenter] = useState(false);
   const manualPanRef = useRef(false);
+
+  useImperativeHandle(ref, () => ({
+    recenter: (lat: number, lng: number) => {
+      mapRef.current?.setView([lat, lng], 16, { animate: true });
+      manualPanRef.current = false;
+    }
+  }), []);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -30,13 +41,13 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map);
-    map.on('dragstart', () => { manualPanRef.current = true; setShowRecenter(true); });
-    map.on('zoomstart', () => { manualPanRef.current = true; setShowRecenter(true); });
+    map.on('dragstart', () => { manualPanRef.current = true; onManualPan?.(); });
+    map.on('zoomstart', () => { manualPanRef.current = true; onManualPan?.(); });
     mapRef.current = map;
     const observer = new ResizeObserver(() => map.invalidateSize());
     observer.observe(containerRef.current);
     return () => { observer.disconnect(); map.remove(); mapRef.current = null; };
-  }, []);
+  }, [onManualPan]);
 
   // Static layers: stops, route polylines, start marker
   useEffect(() => {
@@ -121,24 +132,9 @@ export default function MapView({ waypoints, driverLocation, startLocation, heig
     }
   }, [driverLocation, mt]);
 
-  const handleRecenter = useCallback(() => {
-    if (!driverLocation || !mapRef.current) return;
-    mapRef.current.setView([driverLocation.lat, driverLocation.lng], 16, { animate: true });
-    manualPanRef.current = false;
-    setShowRecenter(false);
-  }, [driverLocation]);
-
   return (
     <div style={{ height, width: '100%', position: 'relative' }}>
       <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
-      {followDriver && showRecenter && (
-        <button onClick={handleRecenter}
-          className="absolute bottom-4 right-4 z-[1000] w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-sm hover:bg-gray-50 transition-all active:scale-90 border border-gray-200">
-          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-600">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-          </svg>
-        </button>
-      )}
     </div>
   );
-}
+});

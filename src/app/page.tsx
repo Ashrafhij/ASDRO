@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Customer, Location, OptimizedRoute } from '@/lib/types';
 import { optimizeRoute } from '@/lib/optimizer';
@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n-context';
 import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import type { MapViewRef } from '@/components/MapView';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
@@ -36,6 +37,8 @@ export default function Home() {
   const [locating, setLocating] = useState(true);
   const [showMap, setShowMap] = useState(false);
   const [inAppNav, setInAppNav] = useState(false);
+  const [recenterVisible, setRecenterVisible] = useState(false);
+  const mapRef = useRef<MapViewRef>(null);
   const hasRoute = route && route.waypoints.length > 0;
   const sortedWps = hasRoute ? [...route!.waypoints].sort((a, b) => a.order - b.order) : [];
   const activeWaypoint = sortedWps.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
@@ -254,13 +257,25 @@ export default function Home() {
         <div className="fixed inset-0 z-50 overflow-hidden">
           <div className="h-screen w-full">
             <MapView
+              ref={mapRef}
               waypoints={route?.waypoints || []}
               driverLocation={driverLocation}
               startLocation={!driverLocation ? startLocation : null}
               height="100%"
               followDriver
+              onManualPan={() => setRecenterVisible(true)}
             />
           </div>
+
+          {/* Re-center button */}
+          {recenterVisible && driverLocation && (
+            <button onClick={() => { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setRecenterVisible(false); }}
+              className="absolute bottom-72 right-4 z-[1001] w-10 h-10 bg-white/90 backdrop-blur-xl rounded-full shadow-2xl flex items-center justify-center border border-white/40 transition-all active:scale-90 hover:bg-white">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-600">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+            </button>
+          )}
 
           {/* Top instruction chip */}
           {activeWaypoint.nextInstruction && (

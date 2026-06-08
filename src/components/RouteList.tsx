@@ -166,22 +166,22 @@ export default function RouteList({
         )}
 
         {currentStop && (
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-5 shadow-xl shadow-blue-200/40 space-y-4">
+          <div className="bg-black/60 backdrop-blur-2xl rounded-2xl border border-white/10 p-5 shadow-2xl space-y-4">
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-blue-200 font-semibold uppercase tracking-widest">{rt.nextStop}</span>
-              {defaultNav && <span className="text-[10px] text-blue-300 ms-auto">{rt.navigate}: {np[navApps.find(a => a.key === defaultNav)!.labelKey]}</span>}
+              <span className="text-[10px] text-white/40 font-semibold uppercase tracking-widest">{rt.nextStop}</span>
+              {defaultNav && <span className="text-[10px] text-white/30 ms-auto">{rt.navigate}: {np[navApps.find(a => a.key === defaultNav)!.labelKey]}</span>}
             </div>
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-lg font-bold text-white shadow-inner flex-shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-lg font-bold text-white shadow-inner flex-shrink-0 border border-white/10">
                 {currentStop.order}
               </div>
               <div className="flex-1 min-w-0 pt-1">
                 <h3 className="text-lg font-bold text-white">{currentStop.customer.name}</h3>
-                <p className="text-sm text-blue-200 truncate mt-0.5">{currentStop.customer.address}</p>
+                <p className="text-sm text-white/50 truncate mt-0.5">{currentStop.customer.address}</p>
                 {currentStop.customer.phone && (
                   <div className="flex gap-2 mt-2">
                     <a href={'tel:' + currentStop.customer.phone}
-                      className="inline-flex items-center gap-1.5 text-xs text-blue-100 bg-white/15 rounded-lg px-3 py-1.5 hover:bg-white/25 transition-colors">
+                      className="inline-flex items-center gap-1.5 text-xs text-white/70 bg-white/10 rounded-lg px-3 py-1.5 hover:bg-white/20 transition-colors">
                       📞 {rt.call}
                     </a>
                     <button onClick={() => openWhatsApp(currentStop.customer.phone)}
@@ -194,27 +194,27 @@ export default function RouteList({
                   </div>
                 )}
               </div>
-              <span className="text-xs text-blue-200 bg-white/15 rounded-lg px-2.5 py-1 flex-shrink-0">🕐 {currentStop.estimatedArrival}</span>
+              <span className="text-xs text-white/50 bg-white/10 rounded-lg px-2.5 py-1 flex-shrink-0 border border-white/5">🕐 {currentStop.estimatedArrival}</span>
             </div>
             <div className="flex gap-2">
               <button onClick={() => {
                 if (defaultNav) { openNavApp(defaultNav, currentStop.customer.location); }
                 else { setNavLocation(currentStop.customer.location); }
               }}
-                className="flex-1 py-3.5 bg-white text-blue-700 text-sm font-bold rounded-xl hover:bg-blue-50 transition-all active:scale-[0.97] shadow-lg min-h-[48px] flex items-center justify-center gap-2">
+                className="flex-1 py-3.5 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] shadow-lg min-h-[48px] flex items-center justify-center gap-2 border border-white/10">
                 🧭 {rt.navigate}
               </button>
               <button onClick={() => onMarkComplete(currentStop.customer.id)}
-                className="px-6 py-3.5 bg-emerald-500 text-white text-sm font-bold rounded-xl hover:bg-emerald-600 transition-all active:scale-[0.97] shadow-lg min-h-[48px] flex items-center justify-center gap-2">
+                className="px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all active:scale-[0.97] shadow-lg min-h-[48px] flex items-center justify-center gap-2">
                 ✓ {rt.done}
               </button>
               <button onClick={() => onSkip(currentStop.customer.id)}
-                className="px-5 py-3.5 bg-white/15 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition-all active:scale-[0.97] min-h-[48px] flex items-center justify-center">
+                className="px-5 py-3.5 bg-white/10 text-white/60 text-sm font-semibold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] min-h-[48px] flex items-center justify-center border border-white/10">
                 ⤵
               </button>
             </div>
             {currentStop.customer.notes && (
-              <p className="text-xs text-blue-200 bg-white/10 rounded-lg px-3 py-2">{currentStop.customer.notes}</p>
+              <p className="text-xs text-white/40 bg-white/5 rounded-lg px-3 py-2 border border-white/5">{currentStop.customer.notes}</p>
             )}
           </div>
         )}
