@@ -84,11 +84,34 @@ export default function Home() {
   };
 
   const hasRoute = route && route.waypoints.length > 0;
+  const [inputExpanded, setInputExpanded] = useState(!hasRoute);
+
+  useEffect(() => {
+    setInputExpanded(!hasRoute);
+  }, [hasRoute]);
 
   const sidebarContent = (
     <>
-      <CustomerInput customers={customers} onChange={setCustomers} />
+      {/* Route results first (when active) */}
+      {hasRoute && (
+        <>
+          <RouteList
+            waypoints={route!.waypoints}
+            totalDistance={route!.totalDistance}
+            totalDuration={route!.totalDuration}
+            completedIds={completedIds}
+            skippedIds={skippedIds}
+            onMarkComplete={handleMarkComplete}
+            onSkip={handleSkip}
+          />
+          <button onClick={handleClear}
+            className="w-full py-2.5 text-xs text-gray-400 hover:text-red-500 rounded-xl border border-dashed border-gray-200 hover:border-red-200 transition-all flex items-center justify-center gap-1.5 hover:bg-red-50/50">
+            🗑️ {pt.clearAll}
+          </button>
+        </>
+      )}
 
+      {/* Optimize button (always between route and input) */}
       {customers.length > 0 && (
         <button onClick={optimize} disabled={loading || !startLocation}
           className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-2">
@@ -106,22 +129,20 @@ export default function Home() {
         </div>
       )}
 
-      {hasRoute && (
-        <>
-          <RouteList
-            waypoints={route!.waypoints}
-            totalDistance={route!.totalDistance}
-            totalDuration={route!.totalDuration}
-            completedIds={completedIds}
-            skippedIds={skippedIds}
-            onMarkComplete={handleMarkComplete}
-            onSkip={handleSkip}
-          />
-          <button onClick={handleClear}
-            className="w-full py-2.5 text-xs text-gray-400 hover:text-red-500 rounded-xl border border-dashed border-gray-200 hover:border-red-200 transition-all flex items-center justify-center gap-1.5 hover:bg-red-50/50">
-            🗑️ {pt.clearAll}
+      {/* Customer Input — collapsed when route is active */}
+      {hasRoute ? (
+        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <button onClick={() => setInputExpanded(!inputExpanded)}
+            className="w-full px-4 py-3 flex items-center justify-between text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors">
+            <span className="flex items-center gap-2">
+              👥 {customers.length} {customers.length === 1 ? 'customer' : 'customers'}
+            </span>
+            <span className={'transition-transform ' + (inputExpanded ? 'rotate-180' : '')}>▼</span>
           </button>
-        </>
+          {inputExpanded && <div className="px-4 pb-4 border-t border-gray-100 pt-4"><CustomerInput customers={customers} onChange={setCustomers} /></div>}
+        </div>
+      ) : (
+        <CustomerInput customers={customers} onChange={setCustomers} />
       )}
     </>
   );
