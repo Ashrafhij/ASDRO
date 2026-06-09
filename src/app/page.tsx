@@ -6,8 +6,11 @@ import { Customer, Location, OptimizedRoute } from '@/lib/types';
 import { optimizeRoute } from '@/lib/optimizer';
 import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
+import { useClipboardDetection } from '@/lib/useClipboardDetection';
+import { reverseGeocode } from '@/lib/geocoding';
 import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
+import ClipboardBanner from '@/components/ClipboardBanner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import type { MapViewRef } from '@/components/MapView';
 
@@ -39,7 +42,9 @@ export default function Home() {
   const [inAppNav, setInAppNav] = useState(false);
   const [recenterVisible, setRecenterVisible] = useState(false);
   const [navLocation, setNavLocation] = useState<Location | null>(null);
+  const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const mapRef = useRef<MapViewRef>(null);
+  const { detected: clipLocation, dismiss: dismissClip } = useClipboardDetection();
   const hasRoute = route && route.waypoints.length > 0;
   const sortedWps = hasRoute ? [...route!.waypoints].sort((a, b) => a.order - b.order) : [];
   const activeWaypoint = sortedWps.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
@@ -56,6 +61,33 @@ export default function Home() {
   useEffect(() => {
     if (hasRoute) setSection('route');
   }, [hasRoute]);
+
+  // Check for incoming shared location from Web Share Target
+  useEffect(() => {
+    const raw = sessionStorage.getItem('asdro-share-location');
+    if (raw) {
+      sessionStorage.removeItem('asdro-share-location');
+      try { setShareLocation(JSON.parse(raw)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  const pendingLocation = shareLocation || clipLocation;
+  const locationSource: 'clipboard' | 'share' = shareLocation ? 'share' : 'clipboard';
+
+  const handleDetectedAdd = useCallback(async (loc: Location) => {
+    const address = await reverseGeocode(loc.lat, loc.lng);
+    const newCustomer: Customer = {
+      id: crypto.randomUUID(),
+      name: '',
+      phone: '',
+      location: loc,
+      address,
+      notes: '',
+    };
+    setCustomers(prev => [...prev, newCustomer]);
+    setShareLocation(null);
+    dismissClip();
+  }, [dismissClip]);
 
   useEffect(() => {
     getDriverLocation()
@@ -121,6 +153,18 @@ export default function Home() {
     try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { /* ok */ }
   }, [customers, completedIds, skippedIds, driverLocation, locale]);
 
+  const handleUnskip = useCallback(async (customerId: string) => {
+    const newSkipped = new Set(skippedIds); newSkipped.delete(customerId);
+    setSkippedIds(newSkipped);
+    const remainingIds = new Set(customers.map(c => c.id));
+    completedIds.forEach(id => remainingIds.delete(id));
+    newSkipped.forEach(id => remainingIds.delete(id));
+    if (remainingIds.size === 0) return;
+    const remaining = customers.filter(c => remainingIds.has(c.id));
+    if (!driverLocation) return;
+    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { /* ok */ }
+  }, [customers, completedIds, skippedIds, driverLocation, locale]);
+
   const handleClear = () => {
     setCustomers([]); setRoute(null); setCompletedIds(new Set());
     setSkippedIds(new Set()); setError(''); setInAppNav(false);
@@ -145,6 +189,7 @@ export default function Home() {
         skippedIds={skippedIds}
         onMarkComplete={handleMarkComplete}
         onSkip={handleSkip}
+        onUnskip={handleUnskip}
         onNavigateInApp={handleInAppNav}
       />
       <button onClick={handleClear}
@@ -156,6 +201,15 @@ export default function Home() {
 
   const sidebarContent = (
     <>
+      {pendingLocation && (
+        <ClipboardBanner
+          location={pendingLocation.location}
+          address={pendingLocation.text}
+          source={locationSource}
+          onAdd={handleDetectedAdd}
+          onDismiss={() => { setShareLocation(null); dismissClip(); }}
+        />
+      )}
       {hasRoute && (
         <div className="bg-gray-800/80 rounded-2xl border border-gray-700/50 overflow-hidden shadow-sm">
           <button onClick={() => setSection(section === 'route' ? 'customers' : 'route')}

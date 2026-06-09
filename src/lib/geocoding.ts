@@ -61,6 +61,19 @@ export function parseWhatsAppLocation(message: string): Location | null {
   return null;
 }
 
+export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'ASDRO/1.0' }
+    });
+    const data = await res.json();
+    return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  } catch {
+    return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  }
+}
+
 export function parseMultipleLocations(text: string): { address: string; location?: Location }[] {
   const lines = text.split('\n').filter(l => l.trim());
   const results: { address: string; location?: Location }[] = [];
