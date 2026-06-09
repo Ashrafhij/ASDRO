@@ -22,11 +22,11 @@ interface MapViewProps {
   skippedIds?: Set<string>;
 }
 
-function addRoutePolyline(map: L.Map, coords: [number, number][], weight: number, color: string, opacity: number, dashed: boolean) {
+function addRoutePolyline(group: L.LayerGroup, coords: [number, number][], weight: number, color: string, opacity: number, dashed: boolean) {
   const dashOpts = dashed ? { dashArray: '8,8' } : {};
-  L.polyline(coords, { color: '#ffffff', weight: weight + 3, opacity: 0.1, ...dashOpts }).addTo(map);
-  L.polyline(coords, { color: '#ffffff', weight: weight + 1, opacity: 0.25, ...dashOpts }).addTo(map);
-  L.polyline(coords, { color, weight, opacity, ...dashOpts }).addTo(map);
+  L.polyline(coords, { color: '#ffffff', weight: weight + 3, opacity: 0.1, ...dashOpts }).addTo(group);
+  L.polyline(coords, { color: '#ffffff', weight: weight + 1, opacity: 0.25, ...dashOpts }).addTo(group);
+  L.polyline(coords, { color, weight, opacity, ...dashOpts }).addTo(group);
 }
 
 const driverIconHtml = `
@@ -56,6 +56,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const driverMarkerRef = useRef<L.Marker | null>(null);
+  const staticGroupRef = useRef<L.LayerGroup | null>(null);
   const manualPanRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
@@ -74,6 +75,8 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     }).addTo(map);
     map.on('dragstart', () => { manualPanRef.current = true; onManualPan?.(); });
     map.on('zoomstart', () => { manualPanRef.current = true; onManualPan?.(); });
+    const group = L.layerGroup().addTo(map);
+    staticGroupRef.current = group;
     mapRef.current = map;
     const observer = new ResizeObserver(() => map.invalidateSize());
     observer.observe(containerRef.current);
@@ -84,9 +87,9 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     const map = mapRef.current;
     if (!map) return;
 
-    map.eachLayer(l => {
-      if (!(l instanceof L.TileLayer)) map.removeLayer(l);
-    });
+    const group = staticGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
 
     const bounds: [number, number][] = [];
     const sorted = [...waypoints].sort((a, b) => a.order - b.order);
@@ -98,7 +101,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     }
     if (startLocation && !driverLocation) {
       const icon = L.divIcon({ html: startIconHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
-      L.marker([startLocation.lat, startLocation.lng], { icon }).addTo(map).bindPopup(`<b>${mt.startLocation}</b>`);
+      L.marker([startLocation.lat, startLocation.lng], { icon }).addTo(group).bindPopup(`<b>${mt.startLocation}</b>`);
       bounds.push([startLocation.lat, startLocation.lng]);
     }
 
@@ -119,7 +122,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       }
 
       L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isNext ? 500 : 0 })
-        .addTo(map)
+        .addTo(group)
         .bindPopup(`<b>${mt.stop} ${wp.order}: ${wp.customer.name}</b><br/>${mt.estArrival}: ${wp.estimatedArrival}`);
       bounds.push([wp.customer.location.lat, wp.customer.location.lng]);
 
@@ -130,11 +133,11 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       const polyOpacity = 0.9;
 
       if (wp.legGeometry && wp.legGeometry.length > 0) {
-        addRoutePolyline(map, wp.legGeometry as [number, number][], polyWeight, polyColor, polyOpacity, false);
+        addRoutePolyline(group, wp.legGeometry as [number, number][], polyWeight, polyColor, polyOpacity, false);
       } else {
         const prev = i === 0 ? (driverLocation || startLocation) : sorted[i - 1].customer.location;
         if (prev && !cs.has(sorted[i - 1]?.customer.id) && !sk.has(sorted[i - 1]?.customer.id)) {
-          addRoutePolyline(map, [[prev.lat, prev.lng], [wp.customer.location.lat, wp.customer.location.lng]], polyWeight, polyColor, polyOpacity, false);
+          addRoutePolyline(group, [[prev.lat, prev.lng], [wp.customer.location.lat, wp.customer.location.lng]], polyWeight, polyColor, polyOpacity, false);
         }
       }
     });

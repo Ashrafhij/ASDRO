@@ -187,6 +187,18 @@ export default function Home() {
     try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { /* ok */ }
   }, [customers, completedIds, skippedIds, driverLocation, locale]);
 
+  const handleUndoComplete = useCallback(async (customerId: string) => {
+    const newCompleted = new Set(completedIds); newCompleted.delete(customerId);
+    setCompletedIds(newCompleted);
+    const remainingIds = new Set(customers.map(c => c.id));
+    newCompleted.forEach(id => remainingIds.delete(id));
+    skippedIds.forEach(id => remainingIds.delete(id));
+    if (remainingIds.size === 0) return;
+    const remaining = customers.filter(c => remainingIds.has(c.id));
+    if (!driverLocation) return;
+    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { /* ok */ }
+  }, [customers, completedIds, skippedIds, driverLocation, locale]);
+
   const handleClear = () => {
     setCustomers([]); setRoute(null); setCompletedIds(new Set());
     setSkippedIds(new Set()); setError(''); setInAppNav(false);
@@ -210,6 +222,7 @@ export default function Home() {
         completedIds={completedIds}
         skippedIds={skippedIds}
         onMarkComplete={handleMarkComplete}
+        onUndoComplete={handleUndoComplete}
         onSkip={handleSkip}
         onUnskip={handleUnskip}
         onNavigateInApp={handleInAppNav}
@@ -282,7 +295,7 @@ export default function Home() {
                   ) : (
                     <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
                   )}
-                  📋 Paste location
+                  {t.detection.pasteLocation}
                 </button>
               )}
               <CustomerInput customers={customers} onChange={setCustomers} />
@@ -299,7 +312,7 @@ export default function Home() {
               ) : (
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
               )}
-              📋 Paste location
+              {t.detection.pasteLocation}
             </button>
           )}
           <CustomerInput customers={customers} onChange={setCustomers} />
@@ -487,7 +500,7 @@ export default function Home() {
           {/* Floating toggle button (mobile) */}
           <button onClick={() => setShowMap(!showMap)}
             className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-6 py-3.5 bg-gray-800/90 backdrop-blur-xl text-white rounded-2xl shadow-2xl shadow-black/30 font-semibold text-sm flex items-center gap-2.5 border border-gray-700/50 transition-all active:scale-95 hover:bg-gray-700/90">
-            {showMap ? '📋 List' : '🗺️ Map'}
+            {showMap ? `📋 ${ht.list}` : `🗺️ ${ht.map}`}
           </button>
         </>
       )}
