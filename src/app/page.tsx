@@ -19,7 +19,7 @@ const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 export default function Home() {
   const { t, locale, dir } = useI18n();
   const pt = t.page;
-  const ht = t.header;
+  const rt = t.routeList;
 
   const load = <T,>(key: string, fallback: T): T => {
     if (typeof window === 'undefined') return fallback;
@@ -38,11 +38,11 @@ export default function Home() {
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set(load<string[]>('completed', [])));
   const [skippedIds, setSkippedIds] = useState<Set<string>>(() => new Set(load<string[]>('skipped', [])));
   const [locating, setLocating] = useState(true);
-  const [showMap, setShowMap] = useState(false);
   const [inAppNav, setInAppNav] = useState(false);
   const [recenterVisible, setRecenterVisible] = useState(false);
-  const [navLocation, setNavLocation] = useState<Location | null>(null);
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const mapRef = useRef<MapViewRef>(null);
   const { detected: clipLocation, dismiss: dismissClip, showButton: showPasteButton } = useClipboardDetection();
   const hasRoute = route && route.waypoints.length > 0;
@@ -52,15 +52,15 @@ export default function Home() {
   const navRemainingDist = navRemaining.reduce((s, w) => s + w.distanceFromPrevious, 0);
   const navRemainingTime = navRemaining.reduce((s, w) => s + w.timeFromPrevious, 0);
   const nextStopId = activeWaypoint?.customer.id || null;
-  const [section, setSection] = useState<'route' | 'customers'>('route');
 
   useEffect(() => { save('customers', customers); }, [customers]);
   useEffect(() => { save('route', route); }, [route]);
   useEffect(() => { save('completed', [...completedIds]); }, [completedIds]);
   useEffect(() => { save('skipped', [...skippedIds]); }, [skippedIds]);
 
+  // Auto-expand sheet when route is generated
   useEffect(() => {
-    if (hasRoute) setSection('route');
+    if (hasRoute) setSheetExpanded(true);
   }, [hasRoute]);
 
   // Check for incoming shared location from Web Share Target
@@ -78,12 +78,8 @@ export default function Home() {
   const handleDetectedAdd = useCallback(async (loc: Location) => {
     const address = await reverseGeocode(loc.lat, loc.lng);
     const newCustomer: Customer = {
-      id: crypto.randomUUID(),
-      name: '',
-      phone: '',
-      location: loc,
-      address,
-      notes: '',
+      id: crypto.randomUUID(), name: '', phone: '',
+      location: loc, address, notes: '',
     };
     setCustomers(prev => [...prev, newCustomer]);
     setShareLocation(null);
@@ -128,12 +124,12 @@ export default function Home() {
     setError(''); setLoading(true);
     try {
       const result = await optimizeRoute(customers, startLocation || driverLocation!, locale);
-      setRoute(result); setSection('route'); setShowMap(true);
+      setRoute(result); setSheetExpanded(true);
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
   }, [customers, startLocation, driverLocation, locale, pt]);
 
-  // Proximity auto-complete: when driver is within 50m of the next stop, mark it done
+  // Proximity auto-complete
   useEffect(() => {
     if (!driverLocation || !route) return;
     const sorted = [...route.waypoints].sort((a, b) => a.order - b.order);
@@ -202,190 +198,104 @@ export default function Home() {
   const handleClear = () => {
     setCustomers([]); setRoute(null); setCompletedIds(new Set());
     setSkippedIds(new Set()); setError(''); setInAppNav(false);
+    setMenuOpen(false);
   };
 
-  const handleInAppNav = () => { setInAppNav(true); setShowMap(true); };
+  const handleInAppNav = () => { setInAppNav(true); setSheetExpanded(false); };
 
   const handleLocate = () => {
-    setLocating(true);
+    setLocating(true); setMenuOpen(false);
     getDriverLocation()
       .then((loc) => { setDriverLocation(loc); setStartLocation(loc); setLocating(false); })
       .catch(() => { setError(pt.gpsError); setLocating(false); });
   };
 
-  const routeContent = hasRoute && (
-    <>
-      <RouteList
-        waypoints={route!.waypoints}
-        totalDistance={route!.totalDistance}
-        totalDuration={route!.totalDuration}
-        completedIds={completedIds}
-        skippedIds={skippedIds}
-        onMarkComplete={handleMarkComplete}
-        onUndoComplete={handleUndoComplete}
-        onSkip={handleSkip}
-        onUnskip={handleUnskip}
-        onNavigateInApp={handleInAppNav}
-      />
-      <button onClick={handleClear}
-        className="w-full py-2.5 text-xs text-gray-500 hover:text-red-400 rounded-xl border border-dashed border-gray-700/50 hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 hover:bg-red-500/10">
-        🗑️ {pt.clearAll}
-      </button>
-    </>
-  );
-
-  const sidebarContent = (
-    <>
-      {pendingLocation && (
-        <ClipboardBanner
-          location={pendingLocation.location}
-          address={pendingLocation.text}
-          source={locationSource}
-          onAdd={handleDetectedAdd}
-          onDismiss={() => { setShareLocation(null); dismissClip(); }}
+  return (
+    <div className="h-screen relative overflow-hidden bg-gray-950" dir={dir}>
+      {/* ===== Full-screen map (always visible, fills viewport) ===== */}
+      <div className="absolute inset-0 z-0">
+        <MapView
+          ref={mapRef}
+          waypoints={route?.waypoints || []}
+          driverLocation={driverLocation}
+          startLocation={!driverLocation ? startLocation : null}
+          nextStopId={nextStopId}
+          completedIds={completedIds}
+          skippedIds={skippedIds}
+          followDriver={inAppNav}
+          onManualPan={() => setRecenterVisible(true)}
+          height="100%"
         />
-      )}
-      {hasRoute && (
-        <div className="bg-gray-800/80 rounded-2xl border border-gray-700/50 overflow-hidden shadow-sm">
-          <button onClick={() => setSection(section === 'route' ? 'customers' : 'route')}
-            className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-white/5 transition-colors">
-            <span className="flex items-center gap-2.5">
-              <span className={'w-2 h-2 rounded-full ' + (section === 'route' ? 'bg-blue-400' : 'bg-gray-600')} />
-              <span className="font-semibold text-gray-100">{pt.route}</span>
-              <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-0.5 rounded-full font-medium">{route!.waypoints.length}</span>
-            </span>
-            <svg className={'w-4 h-4 text-gray-500 transition-transform duration-200 ' + (section === 'route' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          <div className={'overflow-hidden transition-all duration-300 ' + (section === 'route' ? 'max-h-[2000px]' : 'max-h-0')}>
-            <div className="px-4 pb-4 border-t border-gray-700/30 pt-3 space-y-3">
-              {routeContent}
+      </div>
+
+      {/* ===== Corner menu button (top-left) ===== */}
+      <div className="absolute top-4 left-4 z-20">
+        <button onClick={() => setMenuOpen(!menuOpen)}
+          className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center text-white transition-all active:scale-90 hover:bg-gray-800/90">
+          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+          </svg>
+        </button>
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-[-1]" onClick={() => setMenuOpen(false)} />
+            <div className="absolute top-12 left-0 w-52 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 p-2 space-y-1 z-20">
+              <button onClick={handleLocate} disabled={locating}
+                className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3 disabled:opacity-40">
+                <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">
+                  {driverLocation ? '✅' : '📍'}
+                </span>
+                {locating ? pt.locating : driverLocation ? pt.located : pt.locateMe}
+              </button>
+              <div className="border-t border-gray-700/50 my-1" />
+              <div className="px-3 py-2">
+                <p className="text-[11px] text-gray-500 font-medium mb-1.5">{pt.language}</p>
+                <LanguageSwitcher />
+              </div>
+              <div className="border-t border-gray-700/50 my-1" />
+              <button onClick={handleClear}
+                className="w-full py-2.5 px-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-3">
+                <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">🗑️</span>
+                {pt.clearAll}
+              </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
-      {error && (
-        <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
-          <span>⚠️</span> {error}
-        </div>
-      )}
-
-      {hasRoute ? (
-        <div className="bg-gray-800/80 rounded-2xl border border-gray-700/50 overflow-hidden shadow-sm">
-          <button onClick={() => setSection(section === 'customers' ? 'route' : 'customers')}
-            className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-white/5 transition-colors">
-            <span className="flex items-center gap-2.5">
-              <span className={'w-2 h-2 rounded-full ' + (section === 'customers' ? 'bg-blue-400' : 'bg-gray-600')} />
-              <span className="font-semibold text-gray-100">{pt.customers}</span>
-              <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-0.5 rounded-full font-medium">{customers.length}</span>
-            </span>
-            <svg className={'w-4 h-4 text-gray-500 transition-transform duration-200 ' + (section === 'customers' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          <div className={'overflow-hidden transition-all duration-300 ' + (section === 'customers' ? 'max-h-[2000px]' : 'max-h-0')}>
-            <div className="px-4 pb-4 border-t border-gray-700/30 pt-3 space-y-2">
-              {showPasteButton && (
-                <button onClick={handleManualPaste} disabled={pasting}
-                  className="w-full py-2.5 bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl border border-gray-600/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
-                  {pasting ? (
-                    <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
-                  ) : (
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
-                  )}
-                  {t.detection.pasteLocation}
-                </button>
-              )}
-              <CustomerInput customers={customers} onChange={setCustomers} />
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 shadow-sm p-4 space-y-2">
-          {showPasteButton && (
-            <button onClick={handleManualPaste} disabled={pasting}
-              className="w-full py-2.5 bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl border border-gray-600/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
-              {pasting ? (
-                <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
-              ) : (
-                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
-              )}
-              {t.detection.pasteLocation}
-            </button>
-          )}
-          <CustomerInput customers={customers} onChange={setCustomers} />
-        </div>
-      )}
-
-      {customers.length > 0 && (
-        <button onClick={optimize} disabled={loading || !startLocation}
-          className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2.5">
-          {loading ? (
-            <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
-          ) : (
-            <><span className="text-base">{hasRoute ? '🔄' : '🚀'}</span> {hasRoute ? pt.reoptimize : pt.optimizeRoute}</>
-          )}
+      {/* ===== Locate button (top-right) ===== */}
+      {!inAppNav && (
+        <button onClick={() => {
+          if (driverLocation) mapRef.current?.recenter(driverLocation.lat, driverLocation.lng);
+          else handleLocate();
+        }}
+          className="absolute top-4 right-4 z-20 w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
         </button>
       )}
-    </>
-  );
 
-  return (
-    <div className="min-h-screen flex flex-col bg-gray-950 lg:h-screen scroll-smooth">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 px-4 py-3 flex items-center justify-between shadow-lg border-b border-gray-800">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-inner border border-white/10">
-            <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
-              <path d="M16 3C11.5 3 8 6.5 8 11c0 6 8 18 8 18s8-12 8-18c0-4.5-3.5-8-8-8z" fill="white" opacity="0.95"/>
-              <circle cx="16" cy="11" r="3.5" fill="#2563eb"/>
-              <circle cx="11" cy="8" r="1.8" fill="#10b981"/>
-              <circle cx="20" cy="7" r="1.5" fill="#f59e0b"/>
-              <path d="M13 13.5l3 2 4-1.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-white tracking-tight">{t.app.title}</h1>
-            <p className="text-[10px] text-gray-400 leading-none mt-0.5">Smart Route Optimizer</p>
-          </div>
+      {/* ===== Clipboard detection banner ===== */}
+      {pendingLocation && !inAppNav && (
+        <div className="absolute top-16 left-4 right-4 z-20">
+          <ClipboardBanner
+            location={pendingLocation.location}
+            address={pendingLocation.text}
+            source={locationSource}
+            onAdd={handleDetectedAdd}
+            onDismiss={() => { setShareLocation(null); dismissClip(); }}
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleLocate} disabled={locating}
-            className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all backdrop-blur-sm border active:scale-95 disabled:opacity-40 ${
-              driverLocation
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
-                : 'bg-white/10 text-gray-300 border-white/10 hover:bg-white/20'
-            }`}>
-            {locating ? '📡' : driverLocation ? '✅' : '📍'} <span className="hidden sm:inline">{locating ? ht.locating : driverLocation ? ht.located : ht.locateMe}</span>
-          </button>
-          <LanguageSwitcher />
-        </div>
-      </header>
+      )}
 
-      {/* === Full-screen Navigation Mode === */}
+      {/* ===== In-App Navigation Mode ===== */}
       {inAppNav && activeWaypoint ? (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          <div className="h-screen w-full">
-              <MapView
-                ref={mapRef}
-                waypoints={route?.waypoints || []}
-                driverLocation={driverLocation}
-                startLocation={!driverLocation ? startLocation : null}
-                height="100%"
-                followDriver
-                nextStopId={nextStopId}
-                completedIds={completedIds}
-                skippedIds={skippedIds}
-                onManualPan={() => setRecenterVisible(true)}
-              />
-          </div>
-
+        <>
           {/* Re-center button */}
           {recenterVisible && driverLocation && (
             <button onClick={() => { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setRecenterVisible(false); }}
-              className="absolute bottom-28 right-4 z-[1001] w-10 h-10 bg-white/90 backdrop-blur-xl rounded-full shadow-2xl flex items-center justify-center border border-white/40 transition-all active:scale-90 hover:bg-white">
+              className="absolute bottom-28 right-4 z-30 w-10 h-10 bg-white/90 backdrop-blur-xl rounded-full shadow-2xl flex items-center justify-center border border-white/40 transition-all active:scale-90 hover:bg-white">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-600">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
               </svg>
@@ -394,25 +304,24 @@ export default function Home() {
 
           {/* Top instruction chip */}
           {activeWaypoint.nextInstruction && (
-            <div className="absolute top-6 left-4 right-4 z-[1000] flex justify-center">
-              <div className="inline-flex items-center gap-3 bg-black/50 backdrop-blur-xl rounded-full px-5 py-3 shadow-2xl border border-white/10 max-w-[90%]" dir={dir}>
+            <div className="absolute top-6 left-4 right-4 z-30 flex justify-center">
+              <div className="inline-flex items-center gap-3 bg-black/50 backdrop-blur-xl rounded-full px-5 py-3 shadow-2xl border border-white/10 max-w-[90%]">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
                   <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white" style={{ transform: dir === 'rtl' ? 'scaleX(-1)' : 'none' }}>
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{activeWaypoint.nextInstruction}</p>
-                  <p className="text-[11px] text-white/60 truncate">{activeWaypoint.customer.name} · {activeWaypoint.customer.address}</p>
+                  <p className="text-sm font-bold text-white truncate" dir={dir}>{activeWaypoint.nextInstruction}</p>
+                  <p className="text-[11px] text-white/60 truncate">{activeWaypoint.customer.address}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Bottom panel */}
-          <div className="absolute bottom-4 left-3 right-3 z-[1000]">
-            <div className="bg-black/50 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/10 p-3.5 space-y-2.5" dir={dir}>
-              {/* Primary row */}
+          {/* Bottom nav panel */}
+          <div className="absolute bottom-4 left-3 right-3 z-30">
+            <div className="bg-black/50 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/10 p-3.5 space-y-2.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-bold text-white tracking-tight">{Math.round(navRemainingTime)}</span>
@@ -424,8 +333,6 @@ export default function Home() {
                   <p className="text-[10px] text-white/40">{navRemaining.length} stop{navRemaining.length !== 1 ? 's' : ''}</p>
                 </div>
               </div>
-
-              {/* Progress bar + Actions row */}
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   {route && (
@@ -455,54 +362,144 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </div>
+        </>
       ) : (
-        <>
-          {/* Mobile content */}
-          <div className="lg:hidden">
-            {showMap ? (
-              <div className="sticky top-[57px] h-[calc(100vh-57px)]">
-                <MapView
-                  waypoints={route?.waypoints || []}
-                  driverLocation={driverLocation}
-                  startLocation={!driverLocation ? startLocation : null}
-                  nextStopId={nextStopId}
-                  completedIds={completedIds}
-                  skippedIds={skippedIds}
-                  height="100%"
-                />
-              </div>
-            ) : (
-              <div className="p-5 pb-24 space-y-5 min-h-[calc(100vh-57px)]">
-                {sidebarContent}
+        /* ===== Bottom Sheet ===== */
+        <div className="absolute bottom-0 left-0 right-0 z-10">
+          <div className={`bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50 transition-all duration-300 ease-out ${
+            hasRoute && !sheetExpanded ? '' : ''
+          }`}>
+            {/* Handle bar */}
+            <div className="flex justify-center pt-2.5 pb-1 cursor-pointer" onClick={() => hasRoute && setSheetExpanded(!sheetExpanded)}>
+              <div className="w-10 h-1 rounded-full bg-gray-600 hover:bg-gray-500 transition-colors" />
+            </div>
+
+            {/* Always-visible summary bar for route */}
+            {hasRoute && (
+              <div className="px-4 pb-3 cursor-pointer" onClick={() => setSheetExpanded(!sheetExpanded)}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-gray-100 font-semibold">{sortedWps.length} {rt.stops}</span>
+                    <span className="text-gray-500">·</span>
+                    <span className="text-gray-300">{route!.totalDistance.toFixed(1)} {rt.km}</span>
+                    <span className="text-gray-500">·</span>
+                    <span className="text-gray-300">
+                      {route!.totalDuration >= 60
+                        ? `${Math.floor(route!.totalDuration / 60)}h ${Math.round(route!.totalDuration % 60)}m`
+                        : `${Math.round(route!.totalDuration)} ${rt.min}`}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    {activeWaypoint && (
+                      <button onClick={(e) => { e.stopPropagation(); handleInAppNav(); }}
+                        className="py-2 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20 flex items-center gap-1.5">
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        {rt.startRoute}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Desktop content */}
-          <div className="hidden lg:flex flex-1 overflow-hidden">
-            <div className="w-96 flex-shrink-0 bg-gray-900 border-r border-gray-800 overflow-y-auto">
-              <div className="p-5 space-y-5">{sidebarContent}</div>
-            </div>
-            <div className="flex-1 relative">
-              <MapView
-                waypoints={route?.waypoints || []}
-                driverLocation={driverLocation}
-                startLocation={!driverLocation ? startLocation : null}
-                nextStopId={nextStopId}
-                completedIds={completedIds}
-                skippedIds={skippedIds}
-                height="100%"
-              />
+            {/* Always-visible summary for no-route */}
+            {!hasRoute && (
+              <div className="px-4 pb-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-300 font-semibold">{rt.addStop}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Expanded content */}
+            <div className={`overflow-y-auto transition-all duration-300 ${
+              (hasRoute && !sheetExpanded) ? 'max-h-0' : 'max-h-[55vh]'
+            }`}>
+              <div className="px-4 pb-6 space-y-4">
+                {hasRoute ? (
+                  <>
+                    {/* Action buttons */}
+                    <div className="flex gap-2">
+                      <button onClick={handleInAppNav}
+                        className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.97] shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+                        <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        {rt.startRoute}
+                      </button>
+                      <button onClick={optimize} disabled={loading}
+                        className="flex-1 py-3 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] border border-gray-600/50 flex items-center justify-center gap-2 disabled:opacity-40">
+                        {loading ? (
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <><span className="text-base">🔄</span> {pt.reoptimize}</>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Error display */}
+                    {error && (
+                      <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                        <span>⚠️</span> {error}
+                      </div>
+                    )}
+
+                    {/* Full route details */}
+                    <div className="pt-2 border-t border-gray-700/30">
+                      <RouteList
+                        waypoints={route!.waypoints}
+                        totalDistance={route!.totalDistance}
+                        totalDuration={route!.totalDuration}
+                        completedIds={completedIds}
+                        skippedIds={skippedIds}
+                        onMarkComplete={handleMarkComplete}
+                        onUndoComplete={handleUndoComplete}
+                        onSkip={handleSkip}
+                        onUnskip={handleUnskip}
+                        onNavigateInApp={handleInAppNav}
+                      />
+                      <button onClick={handleClear}
+                        className="w-full mt-4 py-2.5 text-xs text-gray-500 hover:text-red-400 rounded-xl border border-dashed border-gray-700/50 hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 hover:bg-red-500/10">
+                        🗑️ {pt.clearAll}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {showPasteButton && (
+                      <button onClick={handleManualPaste} disabled={pasting}
+                        className="w-full py-2.5 bg-gray-800/50 hover:bg-gray-800 text-gray-300 text-xs font-semibold rounded-xl border border-gray-700/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
+                        {pasting ? (
+                          <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
+                        ) : (
+                          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
+                        )}
+                        {t.detection.pasteLocation}
+                      </button>
+                    )}
+
+                    {error && (
+                      <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                        <span>⚠️</span> {error}
+                      </div>
+                    )}
+
+                    <CustomerInput customers={customers} onChange={setCustomers} />
+
+                    {customers.length > 0 && (
+                      <button onClick={optimize} disabled={loading || !startLocation}
+                        className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2.5">
+                        {loading ? (
+                          <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
+                        ) : (
+                          <><span className="text-base">🚀</span> {pt.optimizeRoute}</>
+                        )}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
-
-          {/* Floating toggle button (mobile) */}
-          <button onClick={() => setShowMap(!showMap)}
-            className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-6 py-3.5 bg-gray-800/90 backdrop-blur-xl text-white rounded-2xl shadow-2xl shadow-black/30 font-semibold text-sm flex items-center gap-2.5 border border-gray-700/50 transition-all active:scale-95 hover:bg-gray-700/90">
-            {showMap ? `📋 ${ht.list}` : `🗺️ ${ht.map}`}
-          </button>
-        </>
+        </div>
       )}
     </div>
   );
