@@ -7,7 +7,11 @@ export async function getDriverLocation(): Promise<Location> {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) => resolve({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        heading: pos.coords.heading ?? undefined,
+      }),
       (err) => reject(err),
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -17,7 +21,11 @@ export async function getDriverLocation(): Promise<Location> {
 export function watchDriverLocation(onLocation: (loc: Location) => void, onError?: (err: GeolocationPositionError) => void): () => void {
   if (!navigator.geolocation) return () => {};
   const watchId = navigator.geolocation.watchPosition(
-    (pos) => onLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+    (pos) => onLocation({
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      heading: pos.coords.heading ?? undefined,
+    }),
     (err) => onError?.(err),
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
   );

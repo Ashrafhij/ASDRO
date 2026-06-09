@@ -217,6 +217,7 @@ export default function Home() {
         <MapView
           ref={mapRef}
           waypoints={route?.waypoints || []}
+          customers={customers}
           driverLocation={driverLocation}
           startLocation={!driverLocation ? startLocation : null}
           nextStopId={nextStopId}
