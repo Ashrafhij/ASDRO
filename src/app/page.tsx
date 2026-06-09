@@ -51,6 +51,7 @@ export default function Home() {
   const navRemaining = activeWaypoint ? sortedWps.slice(sortedWps.indexOf(activeWaypoint)) : [];
   const navRemainingDist = navRemaining.reduce((s, w) => s + w.distanceFromPrevious, 0);
   const navRemainingTime = navRemaining.reduce((s, w) => s + w.timeFromPrevious, 0);
+  const nextStopId = activeWaypoint?.customer.id || null;
   const [section, setSection] = useState<'route' | 'customers'>('route');
 
   useEffect(() => { save('customers', customers); }, [customers]);
@@ -127,7 +128,7 @@ export default function Home() {
     setError(''); setLoading(true);
     try {
       const result = await optimizeRoute(customers, startLocation || driverLocation!, locale);
-      setRoute(result); setSection('route');
+      setRoute(result); setSection('route'); setShowMap(true);
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
   }, [customers, startLocation, driverLocation, locale, pt]);
@@ -354,21 +355,24 @@ export default function Home() {
       {inAppNav && activeWaypoint ? (
         <div className="fixed inset-0 z-50 overflow-hidden">
           <div className="h-screen w-full">
-            <MapView
-              ref={mapRef}
-              waypoints={route?.waypoints || []}
-              driverLocation={driverLocation}
-              startLocation={!driverLocation ? startLocation : null}
-              height="100%"
-              followDriver
-              onManualPan={() => setRecenterVisible(true)}
-            />
+              <MapView
+                ref={mapRef}
+                waypoints={route?.waypoints || []}
+                driverLocation={driverLocation}
+                startLocation={!driverLocation ? startLocation : null}
+                height="100%"
+                followDriver
+                nextStopId={nextStopId}
+                completedIds={completedIds}
+                skippedIds={skippedIds}
+                onManualPan={() => setRecenterVisible(true)}
+              />
           </div>
 
           {/* Re-center button */}
           {recenterVisible && driverLocation && (
             <button onClick={() => { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setRecenterVisible(false); }}
-              className="absolute bottom-72 right-4 z-[1001] w-10 h-10 bg-white/90 backdrop-blur-xl rounded-full shadow-2xl flex items-center justify-center border border-white/40 transition-all active:scale-90 hover:bg-white">
+              className="absolute bottom-28 right-4 z-[1001] w-10 h-10 bg-white/90 backdrop-blur-xl rounded-full shadow-2xl flex items-center justify-center border border-white/40 transition-all active:scale-90 hover:bg-white">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-600">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
               </svg>
@@ -393,45 +397,33 @@ export default function Home() {
           )}
 
           {/* Bottom panel */}
-          <div className="absolute bottom-6 left-4 right-4 z-[1000]">
-            <div className="bg-black/60 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/10 p-5 space-y-4" dir={dir}>
-              {/* Primary row — big time + ETA */}
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <span className="text-5xl font-bold text-white tracking-tight">{Math.round(navRemainingTime)}</span>
-                  <span className="text-lg font-semibold text-white/60 ml-1">min</span>
-                  <p className="text-xs text-white/40 mt-0.5">{navRemainingDist.toFixed(1)} km total</p>
+          <div className="absolute bottom-4 left-3 right-3 z-[1000]">
+            <div className="bg-black/50 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/10 p-3.5 space-y-2.5" dir={dir}>
+              {/* Primary row */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-white tracking-tight">{Math.round(navRemainingTime)}</span>
+                  <span className="text-sm font-semibold text-white/60">min</span>
+                  <span className="text-xs text-white/40 ml-2">{navRemainingDist.toFixed(1)} km</span>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-semibold text-white">{activeWaypoint.estimatedArrival}</p>
-                  <p className="text-[11px] text-white/40">estimated arrival</p>
+                  <p className="text-sm font-semibold text-white">{activeWaypoint.estimatedArrival}</p>
+                  <p className="text-[10px] text-white/40">{navRemaining.length} stop{navRemaining.length !== 1 ? 's' : ''}</p>
                 </div>
               </div>
 
-              {/* Stats chips */}
+              {/* Progress bar + Actions row */}
               <div className="flex items-center gap-2">
-                <div className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 rounded-xl py-2">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white/60"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                  <span className="text-xs font-semibold text-white/80">{navRemainingDist.toFixed(1)} km</span>
+                <div className="flex-1">
+                  {route && (
+                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-blue-400 to-emerald-400 rounded-full transition-all duration-500"
+                        style={{ width: Math.min(100, (completedIds.size / (sortedWps.length || 1)) * 100) + '%' }} />
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 rounded-xl py-2">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white/60"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                  <span className="text-xs font-semibold text-white/80">{navRemaining.length} {navRemaining.length === 1 ? 'stop' : 'stops'}</span>
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              {route && (
-                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-blue-400 to-emerald-400 rounded-full transition-all duration-500"
-                    style={{ width: Math.min(100, (completedIds.size / (sortedWps.length || 1)) * 100) + '%' }} />
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex items-center gap-2 pt-1">
                 <button onClick={() => setInAppNav(false)}
-                  className="flex-1 py-3 bg-white/10 text-white/80 text-sm font-semibold rounded-2xl hover:bg-white/20 transition-all active:scale-[0.98]">
+                  className="text-xs text-white/50 font-medium px-2.5 py-1 rounded-lg hover:bg-white/10 transition-all active:scale-95">
                   Exit
                 </button>
                 <button onClick={() => {
@@ -444,7 +436,7 @@ export default function Home() {
                     window.open(urls[navApp] || urls.google, '_blank');
                   }
                 }}
-                  className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold rounded-2xl shadow-lg shadow-blue-500/30 hover:from-blue-600 hover:to-indigo-700 transition-all active:scale-[0.98]">
+                  className="text-xs font-bold text-white px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/30 hover:from-blue-600 hover:to-indigo-700 transition-all active:scale-95">
                   Navigate
                 </button>
               </div>
@@ -461,6 +453,9 @@ export default function Home() {
                   waypoints={route?.waypoints || []}
                   driverLocation={driverLocation}
                   startLocation={!driverLocation ? startLocation : null}
+                  nextStopId={nextStopId}
+                  completedIds={completedIds}
+                  skippedIds={skippedIds}
                   height="100%"
                 />
               </div>
@@ -481,6 +476,9 @@ export default function Home() {
                 waypoints={route?.waypoints || []}
                 driverLocation={driverLocation}
                 startLocation={!driverLocation ? startLocation : null}
+                nextStopId={nextStopId}
+                completedIds={completedIds}
+                skippedIds={skippedIds}
                 height="100%"
               />
             </div>
