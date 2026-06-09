@@ -7,7 +7,7 @@ import { optimizeRoute } from '@/lib/optimizer';
 import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
 import { useClipboardDetection } from '@/lib/useClipboardDetection';
-import { reverseGeocode } from '@/lib/geocoding';
+import { reverseGeocode, parseWhatsAppLocation } from '@/lib/geocoding';
 import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
 import ClipboardBanner from '@/components/ClipboardBanner';
@@ -88,6 +88,27 @@ export default function Home() {
     setShareLocation(null);
     dismissClip();
   }, [dismissClip]);
+
+  const [pasting, setPasting] = useState(false);
+  const handleManualPaste = useCallback(async () => {
+    setError(''); setPasting(true);
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) { setError('Clipboard is empty'); setPasting(false); return; }
+      const location = parseWhatsAppLocation(text);
+      if (!location) { setError('No location found in clipboard'); setPasting(false); return; }
+      const address = await reverseGeocode(location.lat, location.lng);
+      const newCustomer: Customer = {
+        id: crypto.randomUUID(), name: '', phone: '',
+        location, address, notes: '',
+      };
+      setCustomers(prev => [...prev, newCustomer]);
+      setPasting(false);
+    } catch {
+      setError('Could not read clipboard. ASDRO needs HTTPS or a user gesture.');
+      setPasting(false);
+    }
+  }, []);
 
   useEffect(() => {
     getDriverLocation()
@@ -251,13 +272,31 @@ export default function Home() {
             </svg>
           </button>
           <div className={'overflow-hidden transition-all duration-300 ' + (section === 'customers' ? 'max-h-[2000px]' : 'max-h-0')}>
-            <div className="px-4 pb-4 border-t border-gray-700/30 pt-3">
+            <div className="px-4 pb-4 border-t border-gray-700/30 pt-3 space-y-2">
+              <button onClick={handleManualPaste} disabled={pasting}
+                className="w-full py-2.5 bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl border border-gray-600/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
+                {pasting ? (
+                  <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
+                ) : (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
+                )}
+                📋 Paste location
+              </button>
               <CustomerInput customers={customers} onChange={setCustomers} />
             </div>
           </div>
         </div>
       ) : (
-        <div className="bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 shadow-sm p-4">
+        <div className="bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 shadow-sm p-4 space-y-2">
+          <button onClick={handleManualPaste} disabled={pasting}
+            className="w-full py-2.5 bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl border border-gray-600/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
+            {pasting ? (
+              <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
+            ) : (
+              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
+            )}
+            📋 Paste location
+          </button>
           <CustomerInput customers={customers} onChange={setCustomers} />
         </div>
       )}

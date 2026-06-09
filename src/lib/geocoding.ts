@@ -39,14 +39,28 @@ export function parseGoogleMapsLink(url: string): Location | null {
     return { lat: parseFloat(placeMatch[1]), lng: parseFloat(placeMatch[2]) };
   }
 
+  const daddrPattern = /[?&]daddr=(-?\d+\.?\d*),(-?\d+\.?\d*)/;
+  const daddrMatch = url.match(daddrPattern);
+  if (daddrMatch) {
+    return { lat: parseFloat(daddrMatch[1]), lng: parseFloat(daddrMatch[2]) };
+  }
+
   return null;
 }
-
 export function parseWhatsAppLocation(message: string): Location | null {
-  const urlPattern = /https?:\/\/maps\.google\.com[^\s]*/g;
+  const urlPattern = /https?:\/\/(maps\.google\.[^\s]+|(www\.)?google\.com\/maps[^\s]*|maps\.app\.goo\.gl[^\s]*|goo\.gl\/maps[^\s]*)/g;
   const match = message.match(urlPattern);
   if (match) {
     for (const url of match) {
+      const loc = parseGoogleMapsLink(url);
+      if (loc) return loc;
+    }
+  }
+
+  const anyUrlPattern = /https?:\/\/[^\s]+/g;
+  const anyMatch = message.match(anyUrlPattern);
+  if (anyMatch) {
+    for (const url of anyMatch) {
       const loc = parseGoogleMapsLink(url);
       if (loc) return loc;
     }

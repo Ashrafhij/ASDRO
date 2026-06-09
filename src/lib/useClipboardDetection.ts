@@ -15,6 +15,7 @@ export function useClipboardDetection() {
   useEffect(() => {
     const check = async () => {
       try {
+        if (!navigator.clipboard || !navigator.clipboard.readText) return;
         const text = await navigator.clipboard.readText();
         if (!text || text === lastTextRef.current) return;
         const location = parseWhatsAppLocation(text);
@@ -26,6 +27,8 @@ export function useClipboardDetection() {
         // clipboard-read denied or unavailable — silent
       }
     };
+
+    check(); // check on mount
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') check();
