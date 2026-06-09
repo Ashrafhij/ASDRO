@@ -38,6 +38,7 @@ export default function Home() {
   const [showMap, setShowMap] = useState(false);
   const [inAppNav, setInAppNav] = useState(false);
   const [recenterVisible, setRecenterVisible] = useState(false);
+  const [navLocation, setNavLocation] = useState<Location | null>(null);
   const mapRef = useRef<MapViewRef>(null);
   const hasRoute = route && route.waypoints.length > 0;
   const sortedWps = hasRoute ? [...route!.waypoints].sort((a, b) => a.order - b.order) : [];
@@ -156,7 +157,7 @@ export default function Home() {
   const sidebarContent = (
     <>
       {hasRoute && (
-        <div className="bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden shadow-sm">
+        <div className="bg-gray-800/80 rounded-2xl border border-gray-700/50 overflow-hidden shadow-sm">
           <button onClick={() => setSection(section === 'route' ? 'customers' : 'route')}
             className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-white/5 transition-colors">
             <span className="flex items-center gap-2.5">
@@ -183,7 +184,7 @@ export default function Home() {
       )}
 
       {hasRoute ? (
-        <div className="bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden shadow-sm">
+        <div className="bg-gray-800/80 rounded-2xl border border-gray-700/50 overflow-hidden shadow-sm">
           <button onClick={() => setSection(section === 'customers' ? 'route' : 'customers')}
             className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-white/5 transition-colors">
             <span className="flex items-center gap-2.5">
