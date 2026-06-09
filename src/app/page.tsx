@@ -389,15 +389,7 @@ export default function Home() {
                         : `${Math.round(route!.totalDuration)} ${rt.min}`}
                     </span>
                   </div>
-                  <div className="flex gap-2">
-                    {activeWaypoint && (
-                      <button onClick={(e) => { e.stopPropagation(); handleInAppNav(); }}
-                        className="py-2 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20 flex items-center gap-1.5">
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                        {rt.startRoute}
-                      </button>
-                    )}
-                  </div>
+                  <div className="w-5" />
                 </div>
               </div>
             )}
@@ -420,11 +412,6 @@ export default function Home() {
                   <>
                     {/* Action buttons */}
                     <div className="flex gap-2">
-                      <button onClick={handleInAppNav}
-                        className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.97] shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
-                        <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                        {rt.startRoute}
-                      </button>
                       <button onClick={optimize} disabled={loading}
                         className="flex-1 py-3 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] border border-gray-600/50 flex items-center justify-center gap-2 disabled:opacity-40">
                         {loading ? (

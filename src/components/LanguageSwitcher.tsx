@@ -23,8 +23,9 @@ export default function LanguageSwitcher() {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(!open)}
-        className="w-9 h-9 rounded-xl text-base flex items-center justify-center bg-white/10 hover:bg-white/20 transition-all border border-white/10 active:scale-90 shadow-sm">
+        className="h-9 rounded-xl text-sm flex items-center gap-1.5 px-2.5 bg-white/10 hover:bg-white/20 transition-all border border-white/10 active:scale-90 shadow-sm">
         <span className="drop-shadow-sm">{flags[current.code]}</span>
+        <span className="text-gray-200 font-medium">{current.label}</span>
       </button>
       {open && (
         <div className="absolute end-0 top-full mt-2 bg-gray-800 rounded-2xl shadow-2xl border border-gray-700/50 py-1.5 w-max min-w-[140px] z-50 animate-fade-in">

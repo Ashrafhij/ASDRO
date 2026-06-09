@@ -18,15 +18,17 @@ interface RouteListProps {
   onNavigateInApp: () => void;
 }
 
-type NavApp = 'google' | 'waze' | 'apple' | 'osm';
+type NavApp = 'google' | 'waze' | 'apple' | 'osm' | 'app';
 
 function openNavApp(app: NavApp, location: Location) {
+  if (app === 'app') return;
   const latlng = location.lat + ',' + location.lng;
   const urls: Record<NavApp, string> = {
     google: 'https://www.google.com/maps/dir/?api=1&destination=' + latlng + '&travelmode=driving',
     waze: 'https://waze.com/ul?ll=' + latlng + '&navigate=yes&zoom=14',
     apple: 'https://maps.apple.com/?daddr=' + latlng + '&dirflg=d',
     osm: 'https://www.openstreetmap.org/directions?from=&to=' + latlng,
+    app: '',
   };
   window.open(urls[app], '_blank');
 }
@@ -37,6 +39,7 @@ const navApps: { key: NavApp; labelKey: NavPickerKey; icon: string }[] = [
   { key: 'waze', labelKey: 'waze', icon: 'W' },
   { key: 'apple', labelKey: 'appleMaps', icon: 'A' },
   { key: 'osm', labelKey: 'osm', icon: 'O' },
+  { key: 'app', labelKey: 'inApp', icon: '📍' },
 ];
 
 const STORAGE_KEY = 'asdro-default-nav';
@@ -63,13 +66,18 @@ export default function RouteList({
   const closePicker = useCallback(() => { setNavLocation(null); setRememberChoice(false); }, []);
 
   const handleNavSelect = useCallback((app: NavApp, location: Location) => {
+    if (app === 'app') {
+      onNavigateInApp();
+      closePicker();
+      return;
+    }
     if (rememberChoice) {
       localStorage.setItem(STORAGE_KEY, app);
       setDefaultNav(app);
     }
     openNavApp(app, location);
     closePicker();
-  }, [rememberChoice, closePicker]);
+  }, [rememberChoice, closePicker, onNavigateInApp]);
 
   const clearDefault = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);

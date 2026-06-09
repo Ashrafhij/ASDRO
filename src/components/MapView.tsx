@@ -153,6 +153,17 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     mapRef.current.panTo([driverLocation.lat, driverLocation.lng], { animate: true, duration: 0.5 });
   }, [driverLocation, followDriver]);
 
+  const initialFitRef = useRef(true);
+  useEffect(() => {
+    if (!driverLocation || !mapRef.current) return;
+    if (initialFitRef.current) {
+      initialFitRef.current = false;
+      if (waypoints.length === 0 && !startLocation) {
+        mapRef.current.setView([driverLocation.lat, driverLocation.lng], 13, { animate: true });
+      }
+    }
+  }, [driverLocation, waypoints.length, startLocation]);
+
   useEffect(() => {
     if (!driverLocation) return;
     const map = mapRef.current;
