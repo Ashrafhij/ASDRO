@@ -6,6 +6,7 @@ import { parseWhatsAppLocation } from './geocoding';
 
 export function useClipboardDetection() {
   const [detected, setDetected] = useState<{ location: Location; text: string } | null>(null);
+  const [hasContent, setHasContent] = useState<boolean | null>(null); // null = unknown
   const lastTextRef = useRef('');
 
   const dismiss = useCallback(() => {
@@ -15,20 +16,29 @@ export function useClipboardDetection() {
   useEffect(() => {
     const check = async () => {
       try {
-        if (!navigator.clipboard || !navigator.clipboard.readText) return;
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+          setHasContent(null); // can't check — show fallback
+          return;
+        }
         const text = await navigator.clipboard.readText();
-        if (!text || text === lastTextRef.current) return;
+        if (!text || text.trim().length === 0) {
+          setHasContent(false);
+          return;
+        }
+        setHasContent(true);
+        if (text === lastTextRef.current) return;
         const location = parseWhatsAppLocation(text);
         if (location) {
           lastTextRef.current = text;
           setDetected({ location, text });
         }
       } catch {
-        // clipboard-read denied or unavailable — silent
+        // Permission denied or HTTP — can't check, show fallback
+        setHasContent(null);
       }
     };
 
-    check(); // check on mount
+    check();
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') check();
@@ -38,5 +48,5 @@ export function useClipboardDetection() {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
 
-  return { detected, dismiss };
+  return { detected, dismiss, showButton: hasContent !== false };
 }
