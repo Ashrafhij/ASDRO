@@ -110,26 +110,26 @@ export default function RouteList({
       {/* Nav picker bottom sheet */}
       {navLocation && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm" onClick={closePicker}>
-          <div className="w-full max-w-sm bg-white rounded-t-3xl p-5 pb-8 space-y-2 animate-slide-up shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-sm bg-gray-800 rounded-t-3xl p-5 pb-8 space-y-2 animate-slide-up shadow-2xl border border-gray-700/50" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-center mb-2">
-              <div className="w-10 h-1 rounded-full bg-gray-300" />
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
             </div>
-            <p className="text-sm font-semibold text-gray-900 text-center mb-2">{np.title}</p>
+            <p className="text-sm font-semibold text-gray-100 text-center mb-2">{np.title}</p>
             {navApps.map(({ key, labelKey, icon }) => (
               <button key={key} onClick={() => handleNavSelect(key, navLocation!)}
-                className="w-full py-3.5 px-4 text-sm font-medium text-gray-800 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all text-start flex items-center gap-3 active:scale-[0.98] border border-transparent hover:border-gray-200 min-h-[48px]">
-                <span className="w-9 h-9 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">{icon}</span>
+                className="w-full py-3.5 px-4 text-sm font-medium text-gray-200 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-all text-start flex items-center gap-3 active:scale-[0.98] border border-transparent hover:border-gray-600/50 min-h-[48px]">
+                <span className="w-9 h-9 rounded-xl bg-gray-700 shadow-sm border border-gray-600/50 flex items-center justify-center text-xs font-bold text-gray-300 flex-shrink-0">{icon}</span>
                 <span className="flex-1">{np[labelKey]}</span>
-                {defaultNav === key && <span className="text-[10px] text-blue-500 font-medium bg-blue-50 px-2 py-0.5 rounded-full">{np.setDefault}</span>}
+                {defaultNav === key && <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-2 py-0.5 rounded-full">{np.setDefault}</span>}
               </button>
             ))}
             <label className="flex items-center gap-3 py-2.5 px-1 cursor-pointer">
               <input type="checkbox" checked={rememberChoice} onChange={e => setRememberChoice(e.target.checked)}
-                className="w-5 h-5 rounded-lg border-gray-300 text-blue-600 focus:ring-blue-300 cursor-pointer" />
-              <span className="text-sm text-gray-600">{np.setDefault}</span>
+                className="w-5 h-5 rounded-lg border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/30 cursor-pointer" />
+              <span className="text-sm text-gray-300">{np.setDefault}</span>
             </label>
             <button onClick={closePicker}
-              className="w-full py-3 text-sm font-medium text-gray-400 hover:text-gray-600 rounded-xl transition-colors">
+              className="w-full py-3 text-sm font-medium text-gray-500 hover:text-gray-300 rounded-xl transition-colors">
               {np.cancel}
             </button>
           </div>
@@ -138,24 +138,24 @@ export default function RouteList({
 
       <div className="space-y-5">
         {/* Stats bar */}
-        <div className="flex items-stretch bg-white rounded-2xl shadow-sm border border-gray-100 divide-x divide-gray-100 overflow-hidden">
+        <div className="flex items-stretch bg-gray-800/50 rounded-2xl shadow-sm border border-gray-700/50 divide-x divide-gray-700/50 overflow-hidden">
           <div className="flex-1 flex flex-col items-center justify-center py-3.5 px-2">
-            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider mb-0.5">{rt.statDistance}</p>
-            <p className="text-lg font-bold text-gray-900 leading-tight">{totalDistance.toFixed(1)} <span className="text-xs font-medium text-gray-400">{rt.km}</span></p>
+            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5">{rt.statDistance}</p>
+            <p className="text-lg font-bold text-gray-100 leading-tight">{totalDistance.toFixed(1)} <span className="text-xs font-medium text-gray-500">{rt.km}</span></p>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center py-3.5 px-2">
-            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider mb-0.5">{rt.statTime}</p>
-            <p className="text-lg font-bold text-gray-900 leading-tight">
+            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5">{rt.statTime}</p>
+            <p className="text-lg font-bold text-gray-100 leading-tight">
               {totalDuration >= 60 ? `${Math.floor(totalDuration / 60)}h ${Math.round(totalDuration % 60)}m` : `${Math.round(totalDuration)}`}
-              <span className="text-xs font-medium text-gray-400"> {totalDuration >= 60 ? '' : rt.min}</span>
+              <span className="text-xs font-medium text-gray-500"> {totalDuration >= 60 ? '' : rt.min}</span>
             </p>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center py-3.5 px-2">
-            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider mb-0.5">{rt.statStops}</p>
-            <p className="text-lg font-bold text-gray-900 leading-tight">
+            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5">{rt.statStops}</p>
+            <p className="text-lg font-bold text-gray-100 leading-tight">
               {activeCount}
-              {doneCount > 0 && <span className="text-xs font-medium text-emerald-500 ml-1">· {doneCount}✓</span>}
-              {skippedCount > 0 && <span className="text-xs font-medium text-gray-400 ml-1">· {skippedCount}⤵</span>}
+              {doneCount > 0 && <span className="text-xs font-medium text-emerald-400 ml-1">· {doneCount}✓</span>}
+              {skippedCount > 0 && <span className="text-xs font-medium text-gray-500 ml-1">· {skippedCount}⤵</span>}
             </p>
           </div>
         </div>
@@ -239,11 +239,11 @@ export default function RouteList({
         {remainingStops.length > 0 && (
           <div className="space-y-1">
             <div className="flex items-center gap-2 px-0.5 mb-2">
-              <div className="h-px flex-1 bg-gradient-to-r from-gray-100 to-transparent" />
-              <span className="text-[11px] font-medium text-gray-400 tracking-wide">
+              <div className="h-px flex-1 bg-gradient-to-r from-gray-700/50 to-transparent" />
+              <span className="text-[11px] font-medium text-gray-500 tracking-wide">
                 {remainingStops.length} {remainingStops.length === 1 ? 'stop' : 'remaining'}
               </span>
-              <div className="h-px flex-1 bg-gradient-to-l from-gray-100 to-transparent" />
+              <div className="h-px flex-1 bg-gradient-to-l from-gray-700/50 to-transparent" />
             </div>
 
             {remainingStops.map((wp) => {
@@ -253,9 +253,9 @@ export default function RouteList({
 
               return (
                 <div key={wp.customer.id} className={`group rounded-xl border transition-all ${
-                  itemState === 'done' ? 'bg-emerald-50/50 border-emerald-200/60' :
-                  itemState === 'skipped' ? 'bg-gray-50 border-gray-200/60' :
-                  'bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm'
+                  itemState === 'done' ? 'bg-emerald-900/20 border-emerald-700/30' :
+                  itemState === 'skipped' ? 'bg-gray-800/30 border-gray-700/30' :
+                  'bg-gray-800/50 border-gray-700/30 hover:border-gray-600/30 hover:shadow-md hover:bg-gray-800/70'
                 }`}>
                   <div className="px-4 py-3.5">
                     <div className="flex items-start gap-3">
@@ -273,21 +273,21 @@ export default function RouteList({
                       <div className="flex-1 min-w-0 pt-0.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className={`text-sm font-semibold truncate ${
-                            itemState === 'done' ? 'text-emerald-800' :
+                            itemState === 'done' ? 'text-emerald-300' :
                             itemState === 'skipped' ? 'text-gray-500' :
-                            'text-gray-900'
+                            'text-gray-100'
                           }`}>
                             {wp.customer.name}
                           </span>
                           <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md flex-shrink-0 ${
-                            itemState === 'done' ? 'bg-emerald-100 text-emerald-600' :
-                            itemState === 'skipped' ? 'bg-gray-100 text-gray-400' :
-                            'bg-gray-100 text-gray-500'
+                            itemState === 'done' ? 'bg-emerald-900/40 text-emerald-300' :
+                            itemState === 'skipped' ? 'bg-gray-700/50 text-gray-400' :
+                            'bg-gray-700/50 text-gray-300'
                           }`}>
                             {itemState === 'done' ? rt.done : wp.estimatedArrival}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400 truncate mt-0.5">{wp.customer.address}</p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">{wp.customer.address}</p>
                       </div>
                     </div>
 
@@ -324,7 +324,7 @@ export default function RouteList({
 
                     {/* Show customer notes for active and done stops */}
                     {wp.customer.notes && itemState !== 'skipped' && (
-                      <p className="text-[11px] text-gray-400 mt-2 ml-12 leading-relaxed">📌 {wp.customer.notes}</p>
+                      <p className="text-[11px] text-gray-500 mt-2 ml-12 leading-relaxed">📌 {wp.customer.notes}</p>
                     )}
                   </div>
                 </div>

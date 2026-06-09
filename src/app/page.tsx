@@ -147,7 +147,7 @@ export default function Home() {
         onNavigateInApp={handleInAppNav}
       />
       <button onClick={handleClear}
-        className="w-full py-2.5 text-xs text-gray-400 hover:text-red-500 rounded-xl border border-dashed border-gray-200 hover:border-red-200 transition-all flex items-center justify-center gap-1.5 hover:bg-red-50/50">
+        className="w-full py-2.5 text-xs text-gray-500 hover:text-red-400 rounded-xl border border-dashed border-gray-700/50 hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 hover:bg-red-500/10">
         🗑️ {pt.clearAll}
       </button>
     </>
@@ -156,20 +156,20 @@ export default function Home() {
   const sidebarContent = (
     <>
       {hasRoute && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden shadow-sm">
           <button onClick={() => setSection(section === 'route' ? 'customers' : 'route')}
-            className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-gray-50 transition-colors">
+            className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-white/5 transition-colors">
             <span className="flex items-center gap-2.5">
-              <span className={'w-2 h-2 rounded-full ' + (section === 'route' ? 'bg-blue-500' : 'bg-gray-300')} />
-              <span className="font-semibold text-gray-800">{pt.route}</span>
-              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{route!.waypoints.length}</span>
+              <span className={'w-2 h-2 rounded-full ' + (section === 'route' ? 'bg-blue-400' : 'bg-gray-600')} />
+              <span className="font-semibold text-gray-100">{pt.route}</span>
+              <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-0.5 rounded-full font-medium">{route!.waypoints.length}</span>
             </span>
-            <svg className={'w-4 h-4 text-gray-400 transition-transform duration-200 ' + (section === 'route' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={'w-4 h-4 text-gray-500 transition-transform duration-200 ' + (section === 'route' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
           <div className={'overflow-hidden transition-all duration-300 ' + (section === 'route' ? 'max-h-[2000px]' : 'max-h-0')}>
-            <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
+            <div className="px-4 pb-4 border-t border-gray-700/30 pt-3 space-y-3">
               {routeContent}
             </div>
           </div>
@@ -177,39 +177,39 @@ export default function Home() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-100 text-red-600 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+        <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
           <span>⚠️</span> {error}
         </div>
       )}
 
       {hasRoute ? (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden shadow-sm">
           <button onClick={() => setSection(section === 'customers' ? 'route' : 'customers')}
-            className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-gray-50 transition-colors">
+            className="w-full px-4 py-3.5 flex items-center justify-between text-sm hover:bg-white/5 transition-colors">
             <span className="flex items-center gap-2.5">
-              <span className={'w-2 h-2 rounded-full ' + (section === 'customers' ? 'bg-blue-500' : 'bg-gray-300')} />
-              <span className="font-semibold text-gray-800">{pt.customers}</span>
-              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{customers.length}</span>
+              <span className={'w-2 h-2 rounded-full ' + (section === 'customers' ? 'bg-blue-400' : 'bg-gray-600')} />
+              <span className="font-semibold text-gray-100">{pt.customers}</span>
+              <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-0.5 rounded-full font-medium">{customers.length}</span>
             </span>
-            <svg className={'w-4 h-4 text-gray-400 transition-transform duration-200 ' + (section === 'customers' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={'w-4 h-4 text-gray-500 transition-transform duration-200 ' + (section === 'customers' ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
           <div className={'overflow-hidden transition-all duration-300 ' + (section === 'customers' ? 'max-h-[2000px]' : 'max-h-0')}>
-            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+            <div className="px-4 pb-4 border-t border-gray-700/30 pt-3">
               <CustomerInput customers={customers} onChange={setCustomers} />
             </div>
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 shadow-sm p-4">
           <CustomerInput customers={customers} onChange={setCustomers} />
         </div>
       )}
 
       {customers.length > 0 && (
         <button onClick={optimize} disabled={loading || !startLocation}
-          className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-2.5">
+          className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2.5">
           {loading ? (
             <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
           ) : (
@@ -221,11 +221,11 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 lg:h-screen scroll-smooth">
+    <div className="min-h-screen flex flex-col bg-gray-950 lg:h-screen scroll-smooth">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 px-4 py-3 flex items-center justify-between shadow-lg">
+      <header className="sticky top-0 z-30 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 px-4 py-3 flex items-center justify-between shadow-lg border-b border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner">
+          <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-inner border border-white/10">
             <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
               <path d="M16 3C11.5 3 8 6.5 8 11c0 6 8 18 8 18s8-12 8-18c0-4.5-3.5-8-8-8z" fill="white" opacity="0.95"/>
               <circle cx="16" cy="11" r="3.5" fill="#2563eb"/>
@@ -236,15 +236,15 @@ export default function Home() {
           </div>
           <div>
             <h1 className="text-sm font-bold text-white tracking-tight">{t.app.title}</h1>
-            <p className="text-[10px] text-blue-100/80 leading-none mt-0.5">Smart Route Optimizer</p>
+            <p className="text-[10px] text-gray-400 leading-none mt-0.5">Smart Route Optimizer</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleLocate} disabled={locating}
             className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all backdrop-blur-sm border active:scale-95 disabled:opacity-40 ${
               driverLocation
-                ? 'bg-emerald-400/25 text-emerald-100 border-emerald-300/30 hover:bg-emerald-400/35'
-                : 'bg-white/15 text-white border-white/10 hover:bg-white/25'
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
+                : 'bg-white/10 text-gray-300 border-white/10 hover:bg-white/20'
             }`}>
             {locating ? '📡' : driverLocation ? '✅' : '📍'} <span className="hidden sm:inline">{locating ? ht.locating : driverLocation ? ht.located : ht.locateMe}</span>
           </button>
@@ -375,7 +375,7 @@ export default function Home() {
 
           {/* Desktop content */}
           <div className="hidden lg:flex flex-1 overflow-hidden">
-            <div className="w-96 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+            <div className="w-96 flex-shrink-0 bg-gray-900 border-r border-gray-800 overflow-y-auto">
               <div className="p-5 space-y-5">{sidebarContent}</div>
             </div>
             <div className="flex-1 relative">
@@ -390,7 +390,7 @@ export default function Home() {
 
           {/* Floating toggle button (mobile) */}
           <button onClick={() => setShowMap(!showMap)}
-            className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-2xl shadow-blue-300/30 font-semibold text-sm flex items-center gap-2.5 border border-white/20 backdrop-blur-sm transition-all active:scale-95 hover:shadow-blue-300/50">
+            className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-6 py-3.5 bg-gray-800/90 backdrop-blur-xl text-white rounded-2xl shadow-2xl shadow-black/30 font-semibold text-sm flex items-center gap-2.5 border border-gray-700/50 transition-all active:scale-95 hover:bg-gray-700/90">
             {showMap ? '📋 List' : '🗺️ Map'}
           </button>
         </>

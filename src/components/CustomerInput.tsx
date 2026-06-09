@@ -99,61 +99,50 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
     <div className="space-y-4">
       {/* Section header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center text-xs">👤</span>
+        <h2 className="text-sm font-semibold text-gray-100 flex items-center gap-2">
+          <span className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center text-xs">👤</span>
           {ct.addCustomer}
         </h2>
         <button onClick={() => setShowBulk(!showBulk)}
           className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
             showBulk
-              ? 'bg-blue-100 text-blue-700'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              ? 'bg-blue-500/20 text-blue-300'
+              : 'text-gray-400 hover:text-gray-200 hover:bg-white/10'
           }`}>
           {showBulk ? '✏️ ' + ct.singleEntry : '📋 ' + ct.bulkImport}
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-100 text-red-600 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+        <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
           <span>⚠️</span> {error}
         </div>
       )}
 
       {!showBulk ? (
         <div className="space-y-2.5">
-          <div className="relative group">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none opacity-50 group-focus-within:opacity-100 transition-opacity">👤</span>
-            <input type="text" placeholder={ct.name} value={name}
-              onChange={e => setName(e.target.value)}
-              className="w-full ps-10 pe-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none" />
-          </div>
-          <div className="relative group">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none opacity-50 group-focus-within:opacity-100 transition-opacity">📞</span>
-            <input type="tel" placeholder={ct.phone} value={phone}
-              onChange={e => setPhone(e.target.value)}
-              className="w-full ps-10 pe-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none" />
-          </div>
-          <div className="relative group">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none opacity-50 group-focus-within:opacity-100 transition-opacity">📍</span>
-            <input type="text" placeholder={ct.location} value={locationInput}
-              onChange={e => setLocationInput(e.target.value)}
-              className="w-full ps-10 pe-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none" />
-          </div>
-          <div className="relative group">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none opacity-50 group-focus-within:opacity-100 transition-opacity">📝</span>
-            <input type="text" placeholder={ct.notes} value={notes}
-              onChange={e => setNotes(e.target.value)}
-              className="w-full ps-10 pe-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none" />
-          </div>
+          {[ 
+            { icon: '👤', placeholder: ct.name, val: name, set: setName, type: 'text' },
+            { icon: '📞', placeholder: ct.phone, val: phone, set: setPhone, type: 'tel' },
+            { icon: '📍', placeholder: ct.location, val: locationInput, set: setLocationInput, type: 'text' },
+            { icon: '📝', placeholder: ct.notes, val: notes, set: setNotes, type: 'text' },
+          ].map(({ icon, placeholder, val, set, type }) => (
+            <div key={placeholder} className="relative group">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none opacity-40 group-focus-within:opacity-70 transition-opacity">{icon}</span>
+              <input type={type} placeholder={placeholder} value={val}
+                onChange={e => set(e.target.value)}
+                className="w-full ps-10 pe-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none" />
+            </div>
+          ))}
           <div className="flex gap-2">
             {editingId && (
               <button onClick={cancelEdit}
-                className="px-4 py-2.5 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all active:scale-[0.98]">
+                className="px-4 py-2.5 border border-gray-600/50 text-gray-300 rounded-xl text-sm font-medium hover:bg-white/10 transition-all active:scale-[0.98]">
                 {ct.cancel}
               </button>
             )}
             <button onClick={addCustomer} disabled={parsing}
-              className={'py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 ' + (editingId ? 'flex-1' : 'w-full')}>
+              className={'py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 ' + (editingId ? 'flex-1' : 'w-full')}>
               {parsing ? (
                 <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {ct.adding}</span>
               ) : (
@@ -165,13 +154,13 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
       ) : (
         <div className="space-y-2.5">
           <div className="relative group">
-            <span className="absolute left-3 top-3 text-sm pointer-events-none opacity-50">📋</span>
+            <span className="absolute left-3 top-3 text-sm pointer-events-none opacity-40">📋</span>
             <textarea placeholder={ct.bulkPlaceholder} value={bulkInput}
               onChange={e => setBulkInput(e.target.value)} rows={5}
-              className="w-full ps-10 pe-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none font-mono text-xs" />
+              className="w-full ps-10 pe-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none font-mono text-xs" />
           </div>
           <button onClick={addBulk} disabled={parsing}
-            className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2">
+            className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2">
             {parsing ? (
               <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {ct.processing}</span>
             ) : (
@@ -186,29 +175,29 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
           <p className="text-xs font-medium text-gray-400 mb-2 flex items-center gap-1.5">
             <span className="w-1 h-1 rounded-full bg-blue-400" />
             {ct.customers}
-            <span className="text-blue-500 font-semibold">{customers.length}</span>
+            <span className="text-blue-400 font-semibold">{customers.length}</span>
           </p>
           <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
             {customers.map((c, i) => (
-              <div key={c.id} className="flex items-center gap-2 bg-white border border-gray-100 hover:border-gray-200 px-3 py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow">
-                <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-[11px] font-bold flex items-center justify-center shadow-sm">
+              <div key={c.id} className="flex items-center gap-2 bg-gray-800/50 border border-gray-700/50 hover:border-gray-600/50 px-3 py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md hover:bg-gray-800/80">
+                <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-[11px] font-bold flex items-center justify-center shadow-sm">
                   {i + 1}
                 </span>
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => startEdit(c)}>
-                  <span className="font-medium text-gray-900 text-sm flex items-center gap-1.5">
+                  <span className="font-medium text-gray-100 text-sm flex items-center gap-1.5">
                     {c.name}
                     {c.phone && <span className="text-xs text-gray-400 font-normal">· {c.phone}</span>}
                   </span>
-                  <p className="text-xs text-gray-400 truncate flex items-center gap-1 mt-0.5">
+                  <p className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
                     {c.address}
                   </p>
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); startEdit(c); }}
-                  className="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-100 hover:bg-blue-100 text-gray-400 hover:text-blue-600 transition-all flex items-center justify-center text-xs active:scale-90">
+                  className="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-700/50 hover:bg-blue-500/20 text-gray-400 hover:text-blue-300 transition-all flex items-center justify-center text-xs active:scale-90">
                   ✏️
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); removeCustomer(c.id); }}
-                  className="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 transition-all flex items-center justify-center text-xs active:scale-90">
+                  className="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-700/50 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all flex items-center justify-center text-xs active:scale-90">
                   ✕
                 </button>
               </div>

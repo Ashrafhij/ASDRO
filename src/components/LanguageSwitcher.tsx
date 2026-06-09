@@ -23,18 +23,17 @@ export default function LanguageSwitcher() {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(!open)}
-        className="w-9 h-9 rounded-xl text-base flex items-center justify-center bg-white/15 hover:bg-white/25 transition-all border border-white/10 active:scale-90 shadow-sm">
+        className="w-9 h-9 rounded-xl text-base flex items-center justify-center bg-white/10 hover:bg-white/20 transition-all border border-white/10 active:scale-90 shadow-sm">
         <span className="drop-shadow-sm">{flags[current.code]}</span>
       </button>
       {open && (
-        <div className="absolute end-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100/80 py-1.5 w-max min-w-[140px] z-50 animate-fade-in">
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
+        <div className="absolute end-0 top-full mt-2 bg-gray-800 rounded-2xl shadow-2xl border border-gray-700/50 py-1.5 w-max min-w-[140px] z-50 animate-fade-in">
           {locales.map((l) => (
             <button key={l.code} onClick={() => { setLocale(l.code); setOpen(false); }}
               className={`relative w-full px-4 py-2.5 text-sm flex items-center gap-3 transition-colors ${
                 locale === l.code
-                  ? 'bg-blue-100/60 text-blue-700 font-semibold'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? 'bg-blue-500/20 text-blue-300 font-semibold'
+                  : 'text-gray-300 hover:bg-white/10'
               }`}>
               <span className="text-lg leading-none flex-shrink-0">{flags[l.code]}</span>
               <span>{l.label}</span>

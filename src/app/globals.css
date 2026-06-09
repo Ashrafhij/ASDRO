@@ -6,6 +6,7 @@ body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     'Noto Sans', 'Noto Sans Hebrew', 'Noto Sans Arabic', sans-serif;
   -webkit-font-smoothing: antialiased;
+  background-color: #030712;
 }
 
 [dir="rtl"] .leaflet-popup-close-button {
