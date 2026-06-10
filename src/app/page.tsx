@@ -468,6 +468,12 @@ export default function Home() {
                   </div>
                 )}
 
+                {/* Add more stops while route exists */}
+                <div className="pt-2 border-t border-gray-700/30">
+                  <p className="text-xs text-gray-500 font-medium mb-2">{rt.addStop}</p>
+                  <CustomerInput customers={customers} onChange={setCustomers} />
+                </div>
+
                 {/* Full route details */}
                 <div className="pt-2 border-t border-gray-700/30">
                   <RouteList

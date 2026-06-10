@@ -82,53 +82,31 @@ async function getOSRMRoute(start: Location, end: Location, locale?: string): Pr
       geometry,
       instruction,
     };
-  } catch {
+  } catch (e) {
+    console.error('OSRM route failed:', start, end, e);
     return null;
   }
 }
 
-async function buildDistanceMatrix(points: Location[], locale?: string): Promise<{
-  distances: number[][];
-  durations: number[][];
-  geometries: ([number, number][] | undefined)[][];
-  instructions: (string | undefined)[][];
-}> {
+function buildHaversineMatrix(points: Location[]): { distances: number[][]; durations: number[][] } {
   const n = points.length;
   const distances: number[][] = [];
   const durations: number[][] = [];
-  const geometries: ([number, number][] | undefined)[][] = [];
-  const instructions: (string | undefined)[][] = [];
-
   for (let i = 0; i < n; i++) {
     distances.push([]);
     durations.push([]);
-    geometries.push([]);
-    instructions.push([]);
     for (let j = 0; j < n; j++) {
       if (i === j) {
         distances[i].push(0);
         durations[i].push(0);
-        geometries[i].push(undefined);
-        instructions[i].push(undefined);
       } else {
-        const osrm = await getOSRMRoute(points[i], points[j], locale);
-        if (osrm) {
-          distances[i].push(osrm.distance);
-          durations[i].push(osrm.duration);
-          geometries[i].push(osrm.geometry);
-          instructions[i].push(osrm.instruction);
-        } else {
-          const d = haversineDistance(points[i], points[j]);
-          distances[i].push(d);
-          durations[i].push((d / 40) * 60);
-          geometries[i].push(undefined);
-          instructions[i].push(undefined);
-        }
+        const d = haversineDistance(points[i], points[j]);
+        distances[i].push(d);
+        durations[i].push((d / 40) * 60);
       }
     }
   }
-
-  return { distances, durations, geometries, instructions };
+  return { distances, durations };
 }
 
 function nearestNeighborTSP(
@@ -201,14 +179,16 @@ export async function optimizeRoute(
     return { waypoints: [], totalDistance: 0, totalDuration: 0 };
   }
 
+  // Step 1: Use haversine (no API calls) for TSP ordering
   const points = [startLocation, ...customers.map(c => c.location)];
-  const { distances, durations, geometries, instructions } = await buildDistanceMatrix(points, locale);
+  const { distances } = buildHaversineMatrix(points);
 
   const available = new Set(Array.from({ length: customers.length }, (_, i) => i + 1));
   const rawRoute = nearestNeighborTSP(distances, 0, available);
   const improvedRoute = twoOptImprovement(rawRoute, distances);
   const finalCustomers = improvedRoute.filter(i => i !== 0).map(i => i - 1);
 
+  // Step 2: Get road geometry per leg via OSRM (N calls, not N²)
   const waypoints: Waypoint[] = [];
   let totalDist = 0;
   let totalDur = 0;
@@ -216,10 +196,15 @@ export async function optimizeRoute(
 
   for (let i = 0; i < finalCustomers.length; i++) {
     const cust = customers[finalCustomers[i]];
-    const prevIdx = i === 0 ? 0 : finalCustomers[i - 1] + 1;
-    const currIdx = finalCustomers[i] + 1;
-    const dist = distances[prevIdx][currIdx];
-    const dur = durations[prevIdx][currIdx];
+    const from = i === 0 ? startLocation : customers[finalCustomers[i - 1]].location;
+    const to = cust.location;
+
+    const osrm = await getOSRMRoute(from, to, locale);
+    const dist = osrm ? osrm.distance : haversineDistance(from, to);
+    const dur = osrm ? osrm.duration : (dist / 40) * 60;
+    const legGeometry = osrm?.geometry;
+    const nextInstruction = osrm?.instruction;
+
     totalDist += dist;
     totalDur += dur;
     cumulativeTime += dur;
@@ -236,8 +221,8 @@ export async function optimizeRoute(
       }),
       distanceFromPrevious: parseFloat(dist.toFixed(1)),
       timeFromPrevious: parseFloat(dur.toFixed(1)),
-      legGeometry: geometries[prevIdx][currIdx],
-      nextInstruction: instructions[prevIdx][currIdx],
+      legGeometry,
+      nextInstruction,
     });
   }
 
