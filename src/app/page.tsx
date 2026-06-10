@@ -273,7 +273,7 @@ export default function Home() {
       </div>
 
       {/* ===== Corner menu button (top-left) ===== */}
-      <div className="absolute top-4 left-4 z-20">
+      <div className="absolute top-4 left-20 z-20">
         <button onClick={() => setMenuOpen(!menuOpen)}
           className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center text-white transition-all active:scale-90 hover:bg-gray-800/90">
           <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
@@ -313,7 +313,7 @@ export default function Home() {
           if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); }
           else handleLocate();
         }}
-          className="absolute top-4 right-16 z-20 w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+          className="absolute top-4 right-4 z-20 w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
           <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
           </svg>
