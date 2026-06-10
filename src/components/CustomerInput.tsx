@@ -14,9 +14,10 @@ interface Suggestion {
 interface CustomerInputProps {
   customers: Customer[];
   onChange: (customers: Customer[]) => void;
+  onFocus?: () => void;
 }
 
-export default function CustomerInput({ customers, onChange }: CustomerInputProps) {
+export default function CustomerInput({ customers, onChange, onFocus: onFocusProp }: CustomerInputProps) {
   const { t, locale } = useI18n();
   const ct = t.customerInput;
   const [locationInput, setLocationInput] = useState('');
@@ -154,7 +155,7 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
           <input ref={inputRef} type="text" placeholder={ct.location} value={locationInput}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+            onFocus={() => { onFocusProp?.(); if (suggestions.length > 0) setShowSuggestions(true); }}
             className="w-full px-3.5 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none" />
           {showSuggestions && suggestions.length > 0 && (
             <div ref={listRef}
@@ -165,7 +166,7 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
                   className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${
                     i === activeIdx ? 'bg-blue-600/30 text-white' : 'text-gray-300 hover:bg-white/5'
                   }`}>
-                  <span className="line-clamp-2">{s.display_name}</span>
+                  <span className="whitespace-normal break-words">{s.display_name}</span>
                 </button>
               ))}
             </div>

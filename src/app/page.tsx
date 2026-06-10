@@ -491,7 +491,7 @@ export default function Home() {
                 {/* Add more stops while route exists */}
                 <div className="pt-2 border-t border-gray-700/30">
                   <p className="text-xs text-gray-500 font-medium mb-2">{rt.addStop}</p>
-                  <CustomerInput customers={customers} onChange={setCustomers} />
+                  <CustomerInput customers={customers} onChange={setCustomers} onFocus={() => setSheetTranslate(0)} />
                 </div>
 
                 {/* Full route details */}
