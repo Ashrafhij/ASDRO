@@ -4,7 +4,11 @@ import { useState, useRef, useEffect } from 'react';
 import { useI18n } from '@/lib/i18n-context';
 import { locales } from '@/lib/i18n';
 
-export default function LanguageSwitcher() {
+interface LanguageSwitcherProps {
+  onSelect?: () => void;
+}
+
+export default function LanguageSwitcher({ onSelect }: LanguageSwitcherProps) {
   const { locale, setLocale } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -30,7 +34,7 @@ export default function LanguageSwitcher() {
       {open && (
         <div className="absolute end-0 top-full mt-2 bg-gray-800 rounded-2xl shadow-2xl border border-gray-700/50 py-1.5 w-max min-w-[140px] z-50 animate-fade-in">
           {locales.map((l) => (
-            <button key={l.code} onClick={() => { setLocale(l.code); setOpen(false); }}
+            <button key={l.code} onClick={() => { setLocale(l.code); setOpen(false); onSelect?.(); }}
               className={`relative w-full px-4 py-2.5 text-sm flex items-center gap-3 transition-colors ${
                 locale === l.code
                   ? 'bg-blue-500/20 text-blue-300 font-semibold'

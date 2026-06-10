@@ -42,7 +42,7 @@ export default function Home() {
   const [recenterVisible, setRecenterVisible] = useState(false);
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight - 180 : 500);
+  const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
   const [sheetTranslate, setSheetTranslate] = useState(getCollapsedTranslate);
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragState = useRef({ startY: 0, startTranslate: 0, dragging: false, moved: false });
@@ -202,7 +202,7 @@ export default function Home() {
   const handleInAppNav = () => { setInAppNav(true); };
 
   // Draggable bottom sheet handlers
-  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight - 180 : 500);
+  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
 
   const handleSheetPointerDown = (e: React.PointerEvent) => {
     dragState.current = { startY: e.clientY, startTranslate: sheetTranslate, dragging: true, moved: false };
@@ -294,7 +294,7 @@ export default function Home() {
               <div className="border-t border-gray-700/50 my-1" />
               <div className="px-3 py-2">
                 <p className="text-[11px] text-gray-500 font-medium mb-1.5">{pt.language}</p>
-                <LanguageSwitcher />
+                <LanguageSwitcher onSelect={() => setMenuOpen(false)} />
               </div>
               <div className="border-t border-gray-700/50 my-1" />
               <button onClick={handleClear}
@@ -313,7 +313,7 @@ export default function Home() {
           if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); }
           else handleLocate();
         }}
-          className="absolute top-4 right-4 z-20 w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+          className="absolute top-4 right-16 z-20 w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
           <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
           </svg>
@@ -412,7 +412,7 @@ export default function Home() {
         <div ref={sheetRef}
           className="fixed bottom-0 left-0 right-0 z-10 bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50"
           style={{
-            height: '100vh',
+            height: '85vh',
             transform: `translateY(${sheetTranslate}px)`,
             transition: 'transform 0.2s ease-out',
             touchAction: 'none',
@@ -466,7 +466,7 @@ export default function Home() {
           </div>
 
           {/* Scrollable content (visible when expanded) */}
-          <div className="overflow-y-auto px-4 pb-6 space-y-4" style={{ height: 'calc(100vh - 72px)' }}>
+          <div className="overflow-y-auto px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 72px)' }}>
             {hasRoute ? (
               <>
                 {/* Action buttons */}

@@ -20,8 +20,6 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
   const { t } = useI18n();
   const ct = t.customerInput;
   const [locationInput, setLocationInput] = useState('');
-  const [bulkInput, setBulkInput] = useState('');
-  const [showBulk, setShowBulk] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -141,27 +139,6 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
     setLocationInput(''); setParsing(false);
   };
 
-  const addBulk = async () => {
-    if (!bulkInput.trim()) return;
-    setError(''); setParsing(true);
-    const startTime = Date.now();
-    const lines = bulkInput.split('\n').filter(l => l.trim());
-    const results: Customer[] = [];
-    for (const line of lines) {
-      const resolved = await resolveLocation(line.trim());
-      if (resolved) {
-        results.push({
-          id: crypto.randomUUID(), name: '', phone: '',
-          location: resolved.location, address: resolved.address, notes: '',
-        });
-      }
-    }
-    const elapsed = Date.now() - startTime;
-    if (elapsed < 400) await new Promise(r => setTimeout(r, 400 - elapsed));
-    onChange([...customers, ...results]);
-    setBulkInput(''); setParsing(false);
-  };
-
   const removeCustomer = (id: string) => onChange(customers.filter(c => c.id !== id));
 
   return (
@@ -201,28 +178,6 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
           ) : ct.add}
         </button>
       </div>
-
-      <button onClick={() => setShowBulk(!showBulk)}
-        className="text-xs font-medium text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1.5">
-        <span>{showBulk ? '✏️' : '📋'}</span>
-        {showBulk ? 'Single Entry' : ct.importAll}
-      </button>
-
-      {showBulk && (
-        <div className="space-y-2">
-          <textarea placeholder={ct.bulkPlaceholder} value={bulkInput}
-            onChange={e => setBulkInput(e.target.value)} rows={4}
-            className="w-full px-3.5 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none font-mono text-xs" />
-          <button onClick={addBulk} disabled={parsing}
-            className="w-full py-2.5 bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl border border-gray-600/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
-            {parsing ? (
-              <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
-            ) : (
-              <><span className="text-base">📥</span> {ct.importAll}</>
-            )}
-          </button>
-        </div>
-      )}
 
       {customers.length > 0 && (
         <div className="space-y-1 max-h-56 overflow-y-auto">
