@@ -38,8 +38,6 @@ export default function Home() {
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set(load<string[]>('completed', [])));
   const [skippedIds, setSkippedIds] = useState<Set<string>>(() => new Set(load<string[]>('skipped', [])));
   const [locating, setLocating] = useState(true);
-  const [inAppNav, setInAppNav] = useState(false);
-  const [recenterVisible, setRecenterVisible] = useState(false);
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
@@ -51,9 +49,6 @@ export default function Home() {
   const hasRoute = route && route.waypoints.length > 0;
   const sortedWps = hasRoute ? [...route!.waypoints].sort((a, b) => a.order - b.order) : [];
   const activeWaypoint = sortedWps.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
-  const navRemaining = activeWaypoint ? sortedWps.slice(sortedWps.indexOf(activeWaypoint)) : [];
-  const navRemainingDist = navRemaining.reduce((s, w) => s + w.distanceFromPrevious, 0);
-  const navRemainingTime = navRemaining.reduce((s, w) => s + w.timeFromPrevious, 0);
   const nextStopId = activeWaypoint?.customer.id || null;
 
   useEffect(() => { save('customers', customers); }, [customers]);
@@ -195,11 +190,9 @@ export default function Home() {
 
   const handleClear = () => {
     setCustomers([]); setRoute(null); setCompletedIds(new Set());
-    setSkippedIds(new Set()); setError(''); setInAppNav(false);
+    setSkippedIds(new Set()); setError('');
     setMenuOpen(false);
   };
-
-  const handleInAppNav = () => { setInAppNav(true); };
 
   // Draggable bottom sheet handlers
   const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
@@ -266,14 +259,14 @@ export default function Home() {
           nextStopId={nextStopId}
           completedIds={completedIds}
           skippedIds={skippedIds}
-          followDriver={inAppNav}
-          onManualPan={() => setRecenterVisible(true)}
+          followDriver={false}
+          onManualPan={() => {}}
           height="100%"
         />
       </div>
 
       {/* ===== Corner menu button (top-left) ===== */}
-      <div className="absolute top-4 left-20 z-20">
+      <div className="absolute top-4 left-12 z-20">
         <button onClick={() => setMenuOpen(!menuOpen)}
           className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center text-white transition-all active:scale-90 hover:bg-gray-800/90">
           <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
@@ -282,8 +275,8 @@ export default function Home() {
         </button>
         {menuOpen && (
           <>
-            <div className="fixed inset-0 z-[-1]" onClick={() => setMenuOpen(false)} />
-            <div className="absolute top-12 left-0 w-52 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 p-2 space-y-1 z-20">
+            <div className="fixed inset-0" onClick={() => setMenuOpen(false)} style={{ zIndex: 15 }} />
+            <div className="absolute top-12 left-0 w-52 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 p-2 space-y-1" style={{ zIndex: 20 }}>
               <button onClick={handleLocate} disabled={locating}
                 className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3 disabled:opacity-40">
                 <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">
@@ -308,8 +301,7 @@ export default function Home() {
       </div>
 
       {/* ===== Locate button (top-right) ===== */}
-      {!inAppNav && (
-        <button onClick={() => {
+      <button onClick={() => {
           if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); }
           else handleLocate();
         }}
@@ -318,10 +310,9 @@ export default function Home() {
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
           </svg>
         </button>
-      )}
 
       {/* ===== Clipboard detection banner ===== */}
-      {pendingLocation && !inAppNav && (
+      {pendingLocation && (
         <div className="absolute top-16 left-4 right-4 z-20">
           <ClipboardBanner
             location={pendingLocation.location}
@@ -333,82 +324,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ===== In-App Navigation Mode (full-screen overlay) ===== */}
-      {inAppNav && activeWaypoint ? (
-        <>
-          {/* Re-center button */}
-          {recenterVisible && driverLocation && (
-            <button onClick={() => { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setRecenterVisible(false); }}
-              className="absolute bottom-28 right-4 z-30 w-10 h-10 bg-white/90 backdrop-blur-xl rounded-full shadow-2xl flex items-center justify-center border border-white/40 transition-all active:scale-90 hover:bg-white">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-600">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-              </svg>
-            </button>
-          )}
-
-          {/* Top instruction chip */}
-          {activeWaypoint.nextInstruction && (
-            <div className="absolute top-6 left-4 right-4 z-30 flex justify-center">
-              <div className="inline-flex items-center gap-3 bg-black/50 backdrop-blur-xl rounded-full px-5 py-3 shadow-2xl border border-white/10 max-w-[90%]">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white" style={{ transform: dir === 'rtl' ? 'scaleX(-1)' : 'none' }}>
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-white truncate" dir={dir}>{activeWaypoint.nextInstruction}</p>
-                  <p className="text-[11px] text-white/60 truncate">{activeWaypoint.customer.address}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Bottom nav panel */}
-          <div className="absolute bottom-4 left-3 right-3 z-30">
-            <div className="bg-black/50 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/10 p-3.5 space-y-2.5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-white tracking-tight">{Math.round(navRemainingTime)}</span>
-                  <span className="text-sm font-semibold text-white/60">min</span>
-                  <span className="text-xs text-white/40 ml-2">{navRemainingDist.toFixed(1)} km</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-white">{activeWaypoint.estimatedArrival}</p>
-                  <p className="text-[10px] text-white/40">{navRemaining.length} stop{navRemaining.length !== 1 ? 's' : ''}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  {route && (
-                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-blue-400 to-emerald-400 rounded-full transition-all duration-500"
-                        style={{ width: Math.min(100, (completedIds.size / (sortedWps.length || 1)) * 100) + '%' }} />
-                    </div>
-                  )}
-                </div>
-                <button onClick={() => setInAppNav(false)}
-                  className="text-xs text-white/50 font-medium px-2.5 py-1 rounded-lg hover:bg-white/10 transition-all active:scale-95">
-                  Exit
-                </button>
-                <button onClick={() => {
-                  if (activeWaypoint) {
-                    const navApp = (localStorage.getItem('asdro-default-nav') || 'google') as string;
-                    const urls: Record<string, string> = {
-                      google: 'https://www.google.com/maps/dir/?api=1&destination=' + activeWaypoint.customer.location.lat + ',' + activeWaypoint.customer.location.lng + '&travelmode=driving',
-                      waze: 'https://waze.com/ul?ll=' + activeWaypoint.customer.location.lat + ',' + activeWaypoint.customer.location.lng + '&navigate=yes&zoom=14',
-                    };
-                    window.open(urls[navApp] || urls.google, '_blank');
-                  }
-                }}
-                  className="text-xs font-bold text-white px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/30 hover:from-blue-600 hover:to-indigo-700 transition-all active:scale-95">
-                  Navigate
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      ) : (
-        /* ===== Draggable Bottom Sheet ===== */
+      {/* ===== Draggable Bottom Sheet ===== */}
         <div ref={sheetRef}
           className="fixed bottom-0 left-0 right-0 z-10 bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50"
           style={{
@@ -506,7 +422,6 @@ export default function Home() {
                     onUndoComplete={handleUndoComplete}
                     onSkip={handleSkip}
                     onUnskip={handleUnskip}
-                    onNavigateInApp={handleInAppNav}
                   />
                   <button onClick={handleClear}
                     className="w-full mt-4 py-2.5 text-xs text-gray-500 hover:text-red-400 rounded-xl border border-dashed border-gray-700/50 hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 hover:bg-red-500/10">
@@ -550,7 +465,6 @@ export default function Home() {
             )}
           </div>
         </div>
-      )}
     </div>
   );
 }

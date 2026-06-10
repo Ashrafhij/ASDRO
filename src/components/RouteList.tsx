@@ -15,20 +15,16 @@ interface RouteListProps {
   onUndoComplete: (customerId: string) => void;
   onSkip: (customerId: string) => void;
   onUnskip: (customerId: string) => void;
-  onNavigateInApp: () => void;
 }
 
-type NavApp = 'google' | 'waze' | 'apple' | 'osm' | 'app';
+type NavApp = 'google' | 'waze' | 'apple';
 
 function openNavApp(app: NavApp, location: Location) {
-  if (app === 'app') return;
   const latlng = location.lat + ',' + location.lng;
   const urls: Record<NavApp, string> = {
     google: 'https://www.google.com/maps/dir/?api=1&destination=' + latlng + '&travelmode=driving',
     waze: 'https://waze.com/ul?ll=' + latlng + '&navigate=yes&zoom=14',
     apple: 'https://maps.apple.com/?daddr=' + latlng + '&dirflg=d',
-    osm: 'https://www.openstreetmap.org/directions?from=&to=' + latlng,
-    app: '',
   };
   window.open(urls[app], '_blank');
 }
@@ -38,8 +34,6 @@ const navApps: { key: NavApp; labelKey: NavPickerKey; icon: string }[] = [
   { key: 'google', labelKey: 'googleMaps', icon: 'G' },
   { key: 'waze', labelKey: 'waze', icon: 'W' },
   { key: 'apple', labelKey: 'appleMaps', icon: 'A' },
-  { key: 'osm', labelKey: 'osm', icon: 'O' },
-  { key: 'app', labelKey: 'inApp', icon: '📍' },
 ];
 
 const STORAGE_KEY = 'asdro-default-nav';
@@ -49,7 +43,7 @@ function stopName(wp: Waypoint) {
 }
 
 export default function RouteList({
-  waypoints, totalDistance, totalDuration, completedIds, skippedIds, onMarkComplete, onUndoComplete, onSkip, onUnskip, onNavigateInApp,
+  waypoints, totalDistance, totalDuration, completedIds, skippedIds, onMarkComplete, onUndoComplete, onSkip, onUnskip,
 }: RouteListProps) {
   const { t } = useI18n();
   const np = t.navPicker;
@@ -66,18 +60,13 @@ export default function RouteList({
   const closePicker = useCallback(() => { setNavLocation(null); setRememberChoice(false); }, []);
 
   const handleNavSelect = useCallback((app: NavApp, location: Location) => {
-    if (app === 'app') {
-      onNavigateInApp();
-      closePicker();
-      return;
-    }
     if (rememberChoice) {
       localStorage.setItem(STORAGE_KEY, app);
       setDefaultNav(app);
     }
     openNavApp(app, location);
     closePicker();
-  }, [rememberChoice, closePicker, onNavigateInApp]);
+  }, [rememberChoice, closePicker]);
 
   const clearDefault = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
@@ -98,7 +87,7 @@ export default function RouteList({
       {/* Nav picker bottom sheet */}
       {navLocation && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={closePicker}>
-          <div className="w-full max-w-sm bg-gray-800 rounded-t-3xl p-5 pb-8 space-y-2 animate-slide-up shadow-2xl border border-gray-700/50" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-sm bg-gray-800 rounded-t-3xl p-5 pb-8 space-y-2 animate-slide-up shadow-2xl border border-gray-700/50 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-center mb-2">
               <div className="w-10 h-1 rounded-full bg-gray-600" />
             </div>
