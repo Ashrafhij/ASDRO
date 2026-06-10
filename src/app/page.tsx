@@ -123,7 +123,7 @@ export default function Home() {
     if (!startLocation && !driverLocation) { setError(pt.setStartingLocation); return; }
     setError(''); setLoading(true);
     try {
-      const result = await optimizeRoute(customers, startLocation || driverLocation!, locale);
+      const result = await optimizeRoute(customers, driverLocation || startLocation!, locale);
       setRoute(result); setSheetExpanded(true);
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
@@ -473,7 +473,7 @@ export default function Home() {
                     <CustomerInput customers={customers} onChange={setCustomers} />
 
                     {customers.length > 0 && (
-                      <button onClick={optimize} disabled={loading || !startLocation}
+                      <button onClick={optimize} disabled={loading || (!driverLocation && !startLocation)}
                         className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2.5">
                         {loading ? (
                           <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
