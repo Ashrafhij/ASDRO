@@ -331,7 +331,6 @@ export default function Home() {
             height: '85vh',
             transform: `translateY(${sheetTranslate}px)`,
             transition: 'transform 0.2s ease-out',
-            touchAction: 'none',
           }}>
           {/* Drag handle + summary (pointer capture area) */}
           <div onPointerDown={handleSheetPointerDown}
@@ -339,7 +338,8 @@ export default function Home() {
             onPointerUp={handleSheetPointerUp}
             onPointerCancel={handleSheetPointerUp}
             onClick={() => { if (!dragState.current.moved) toggleSheet(); }}
-            className="cursor-grab active:cursor-grabbing select-none">
+            className="cursor-grab active:cursor-grabbing select-none"
+            style={{ touchAction: 'none' }}>
             {/* Handle bar */}
             <div className="flex justify-center pt-2.5 pb-1 relative">
               <div className="w-10 h-1 rounded-full bg-gray-600" />
