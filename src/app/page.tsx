@@ -42,7 +42,7 @@ export default function Home() {
   const [recenterVisible, setRecenterVisible] = useState(false);
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 72 : 500);
+  const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 140 : 500);
   const [sheetTranslate, setSheetTranslate] = useState(getCollapsedTranslate);
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragState = useRef({ startY: 0, startTranslate: 0, dragging: false, moved: false });
@@ -202,7 +202,7 @@ export default function Home() {
   const handleInAppNav = () => { setInAppNav(true); };
 
   // Draggable bottom sheet handlers
-  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 72 : 500);
+  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 140 : 500);
 
   const handleSheetPointerDown = (e: React.PointerEvent) => {
     dragState.current = { startY: e.clientY, startTranslate: sheetTranslate, dragging: true, moved: false };
