@@ -349,7 +349,7 @@ export default function Home() {
             transform: `translateY(${sheetTranslate}px)`,
             transition: 'transform 0.3s ease-out',
           }}>
-          {/* Drag handle + summary (pointer capture area) */}
+          {/* Drag zone — handle, summary, and action buttons (~132px, all touch-draggable) */}
           <div onPointerDown={handleSheetPointerDown}
             onPointerMove={handleSheetPointerMove}
             onPointerUp={handleSheetPointerUp}
@@ -368,9 +368,9 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Summary bar for route */}
-            {hasRoute && (
-              <div className="px-4 pb-3">
+            {/* Summary + action buttons */}
+            {hasRoute ? (
+              <div className="px-4 pb-3 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 text-sm">
                     <span className="text-gray-100 font-semibold">{sortedWps.length} {rt.stops}</span>
@@ -385,21 +385,53 @@ export default function Home() {
                   </div>
                   <div className="w-5" />
                 </div>
+                {/* Reoptimize button */}
+                <div className="flex gap-2">
+                  <button onClick={optimize} disabled={loading}
+                    className="flex-1 py-3 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] border border-gray-600/50 flex items-center justify-center gap-2 disabled:opacity-40">
+                    {loading ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <><span className="text-base">🔄</span> {pt.reoptimize}</>
+                    )}
+                  </button>
+                </div>
+                {/* Error display */}
+                {error && (
+                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                    <span>⚠️</span> {error}
+                  </div>
+                )}
               </div>
-            )}
-
-            {/* Summary for no-route */}
-            {!hasRoute && (
-              <div className="px-4 pb-1">
+            ) : (
+              <div className="px-4 pb-3 space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-300 font-semibold">{rt.addStop}</span>
                 </div>
+                {/* Paste button */}
+                {showPasteButton && (
+                  <button onClick={handleManualPaste} disabled={pasting}
+                    className="w-full py-2.5 bg-gray-800/50 hover:bg-gray-800 text-gray-300 text-xs font-semibold rounded-xl border border-gray-700/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
+                    {pasting ? (
+                      <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
+                    )}
+                    {t.detection.pasteLocation}
+                  </button>
+                )}
+                {/* Error display */}
+                {error && (
+                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                    <span>⚠️</span> {error}
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Scrollable content (visible when expanded) */}
-          <div className="overflow-y-auto overscroll-contain px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 72px)', touchAction: 'pan-y' }}
+          {/* Scrollable content (below the drag zone) */}
+          <div className="overflow-y-auto overscroll-contain px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 132px)', touchAction: 'pan-y' }}
             onPointerDown={() => {
               const snaps = getSnapPoints();
               if (Math.abs(getCurrentTranslate() - snaps.collapsed) < 20) snapTo(snaps.half);
@@ -410,25 +442,6 @@ export default function Home() {
             }}>
             {hasRoute ? (
               <>
-                {/* Action buttons */}
-                <div className="flex gap-2 pt-2">
-                  <button onClick={optimize} disabled={loading}
-                    className="flex-1 py-3 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] border border-gray-600/50 flex items-center justify-center gap-2 disabled:opacity-40">
-                    {loading ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <><span className="text-base">🔄</span> {pt.reoptimize}</>
-                    )}
-                  </button>
-                </div>
-
-                {/* Error display */}
-                {error && (
-                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
-                    <span>⚠️</span> {error}
-                  </div>
-                )}
-
                 {/* Add more stops while route exists */}
                 <div className="pt-2 border-t border-gray-700/30">
                   <p className="text-xs text-gray-500 font-medium mb-2">{rt.addStop}</p>
@@ -436,7 +449,7 @@ export default function Home() {
                 </div>
 
                 {/* Full route details */}
-                <div className="pt-2 border-t border-gray-700/30">
+                <div className="border-t border-gray-700/30">
                   <RouteList
                     waypoints={route!.waypoints}
                     totalDistance={route!.totalDistance}
@@ -456,24 +469,6 @@ export default function Home() {
               </>
             ) : (
               <>
-                {showPasteButton && (
-                  <button onClick={handleManualPaste} disabled={pasting}
-                    className="w-full py-2.5 bg-gray-800/50 hover:bg-gray-800 text-gray-300 text-xs font-semibold rounded-xl border border-gray-700/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
-                    {pasting ? (
-                      <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
-                    ) : (
-                      <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
-                    )}
-                    {t.detection.pasteLocation}
-                  </button>
-                )}
-
-                {error && (
-                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
-                    <span>⚠️</span> {error}
-                  </div>
-                )}
-
                 <CustomerInput customers={customers} onChange={setCustomers} />
 
                 {customers.length > 0 && (
