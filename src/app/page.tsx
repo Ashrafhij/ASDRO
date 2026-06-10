@@ -431,9 +431,10 @@ export default function Home() {
           </div>
 
           {/* Scrollable content (below the drag zone).
-              ALL pointer/touch events are stopped from propagation so no gesture
-              inside this area reaches the map layer or Leaflet's document listeners. */}
-          <div className="overflow-y-auto overscroll-contain px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 132px)', touchAction: 'pan-y' }}
+              overscroll-none prevents scroll chaining / rubber-banding on iOS Safari.
+              The inner min-h[calc(100%+1px)] guarantees the container is always
+              1px scrollable so the browser never passes touch gestures to the body. */}
+          <div className="overflow-y-auto overscroll-none px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 132px)', touchAction: 'pan-y' }}
             onPointerDown={(e) => {
               e.stopPropagation();
               const snaps = getSnapPoints();
@@ -449,6 +450,7 @@ export default function Home() {
               const snaps = getSnapPoints();
               if (Math.abs(getCurrentTranslate() - snaps.collapsed) < 20) snapTo(snaps.half);
             }}>
+            <div style={{ minHeight: 'calc(100% + 1px)' }}>
             {hasRoute ? (
               <>
                 {/* Add more stops while route exists */}
@@ -492,6 +494,7 @@ export default function Home() {
                 )}
               </>
             )}
+          </div>
           </div>
         </div>
     </div>
