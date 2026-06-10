@@ -62,30 +62,37 @@ function formatInstruction(step: { maneuver: { type: string; modifier?: string }
   return `${typeLabel} ${dir}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
 }
 
-async function getOSRMRoute(start: Location, end: Location, locale?: string): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string } | null> {
+async function getOSRMRoute(start: Location, end: Location, locale?: string, retries = 2): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string } | null> {
   const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true${locale && ['he', 'ar'].includes(locale) ? `&language=${locale}` : ''}`;
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.code !== 'Ok' || !data.routes?.length) return null;
-    const route = data.routes[0];
-    let geometry: [number, number][] | undefined;
-    let instruction: string | undefined;
-    if (route.geometry) geometry = decodePolyline(route.geometry);
-    if (route.legs?.[0]?.steps?.length) {
-      const first = route.legs[0].steps.find((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart');
-      if (first) instruction = formatInstruction(first, locale);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.code !== 'Ok' || !data.routes?.length) {
+        if (attempt < retries) { await new Promise(r => setTimeout(r, 1000)); continue; }
+        return null;
+      }
+      const route = data.routes[0];
+      let geometry: [number, number][] | undefined;
+      let instruction: string | undefined;
+      if (route.geometry) geometry = decodePolyline(route.geometry);
+      if (route.legs?.[0]?.steps?.length) {
+        const first = route.legs[0].steps.find((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart');
+        if (first) instruction = formatInstruction(first, locale);
+      }
+      return {
+        distance: route.distance / 1000,
+        duration: route.duration / 60,
+        geometry,
+        instruction,
+      };
+    } catch (e) {
+      if (attempt < retries) { await new Promise(r => setTimeout(r, 1000)); continue; }
+      console.error('OSRM route failed:', start, end, e);
+      return null;
     }
-    return {
-      distance: route.distance / 1000,
-      duration: route.duration / 60,
-      geometry,
-      instruction,
-    };
-  } catch (e) {
-    console.error('OSRM route failed:', start, end, e);
-    return null;
   }
+  return null;
 }
 
 function buildHaversineMatrix(points: Location[]): { distances: number[][]; durations: number[][] } {
