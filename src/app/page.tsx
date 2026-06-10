@@ -42,7 +42,7 @@ export default function Home() {
   const [recenterVisible, setRecenterVisible] = useState(false);
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 140 : 500);
+  const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight - 180 : 500);
   const [sheetTranslate, setSheetTranslate] = useState(getCollapsedTranslate);
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragState = useRef({ startY: 0, startTranslate: 0, dragging: false, moved: false });
@@ -202,7 +202,7 @@ export default function Home() {
   const handleInAppNav = () => { setInAppNav(true); };
 
   // Draggable bottom sheet handlers
-  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 140 : 500);
+  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight - 180 : 500);
 
   const handleSheetPointerDown = (e: React.PointerEvent) => {
     dragState.current = { startY: e.clientY, startTranslate: sheetTranslate, dragging: true, moved: false };
@@ -412,7 +412,7 @@ export default function Home() {
         <div ref={sheetRef}
           className="fixed bottom-0 left-0 right-0 z-10 bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50"
           style={{
-            height: '65vh',
+            height: '100vh',
             transform: `translateY(${sheetTranslate}px)`,
             transition: 'transform 0.2s ease-out',
             touchAction: 'none',
@@ -466,7 +466,7 @@ export default function Home() {
           </div>
 
           {/* Scrollable content (visible when expanded) */}
-          <div className="overflow-y-auto px-4 pb-6 space-y-4" style={{ height: 'calc(65vh - 72px)' }}>
+          <div className="overflow-y-auto px-4 pb-6 space-y-4" style={{ height: 'calc(100vh - 72px)' }}>
             {hasRoute ? (
               <>
                 {/* Action buttons */}
