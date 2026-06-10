@@ -17,7 +17,7 @@ interface CustomerInputProps {
 }
 
 export default function CustomerInput({ customers, onChange }: CustomerInputProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const ct = t.customerInput;
   const [locationInput, setLocationInput] = useState('');
   const [parsing, setParsing] = useState(false);
@@ -48,7 +48,7 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
-        { headers: { 'User-Agent': 'ASDRO/1.0' } }
+        { headers: { 'User-Agent': 'ASDRO/1.0', 'Accept-Language': locale } }
       );
       const data = await res.json();
       if (data && data.length > 0) {
@@ -110,7 +110,7 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
     const waLoc = parseWhatsAppLocation(trimmed);
     if (waLoc) return { location: waLoc, address: trimmed };
     try {
-      const geoResult = await geocodeAddress(trimmed);
+      const geoResult = await geocodeAddress(trimmed, locale);
       return geoResult ? { location: geoResult, address: trimmed } : null;
     } catch { return null; }
   };

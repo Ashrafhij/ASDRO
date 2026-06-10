@@ -1,11 +1,11 @@
 import { Location } from './types';
 
-export async function geocodeAddress(address: string): Promise<Location | null> {
+export async function geocodeAddress(address: string, locale?: string): Promise<Location | null> {
   const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'ASDRO/1.0' }
-    });
+    const headers: Record<string, string> = { 'User-Agent': 'ASDRO/1.0' };
+    if (locale) headers['Accept-Language'] = locale;
+    const res = await fetch(url, { headers });
     const data = await res.json();
     if (!data || data.length === 0) return null;
     return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
