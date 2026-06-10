@@ -432,11 +432,15 @@ export default function Home() {
 
           {/* Scrollable content (below the drag zone) */}
           <div className="overflow-y-auto overscroll-contain px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 132px)', touchAction: 'pan-y' }}
-            onPointerDown={() => {
+            onPointerDown={(e) => {
+              e.stopPropagation();
               const snaps = getSnapPoints();
               if (Math.abs(getCurrentTranslate() - snaps.collapsed) < 20) snapTo(snaps.half);
             }}
-            onWheel={() => {
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onWheel={(e) => {
+              e.stopPropagation();
               const snaps = getSnapPoints();
               if (Math.abs(getCurrentTranslate() - snaps.collapsed) < 20) snapTo(snaps.half);
             }}>
