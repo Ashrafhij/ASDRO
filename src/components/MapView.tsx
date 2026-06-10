@@ -218,16 +218,22 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     }
   }, [driverLocation]);
 
-  // Initial fit: center on driver when first location arrives (no waypoints, no customers)
+  // Initial fit: when first driver location arrives, fit bounds to show everything
   useEffect(() => {
     if (!driverLocation || !mapRef.current) return;
     if (initialFitRef.current) {
       initialFitRef.current = false;
-      if (waypoints.length === 0 && customers.length === 0 && !startLocation) {
-        mapRef.current.setView([driverLocation.lat, driverLocation.lng], 13, { animate: true });
+      const allBounds: [number, number][] = [[driverLocation.lat, driverLocation.lng]];
+      customers.forEach(c => allBounds.push([c.location.lat, c.location.lng]));
+      waypoints.forEach(w => allBounds.push([w.customer.location.lat, w.customer.location.lng]));
+      if (startLocation) allBounds.push([startLocation.lat, startLocation.lng]);
+      if (allBounds.length > 1) {
+        mapRef.current.fitBounds(allBounds, { padding: [60, 60], maxZoom: 16, animate: true });
+      } else {
+        mapRef.current.setView([driverLocation.lat, driverLocation.lng], 15, { animate: true });
       }
     }
-  }, [driverLocation, waypoints.length, customers.length, startLocation]);
+  }, [driverLocation, waypoints, customers, startLocation]);
 
   // Inject pulse-ring keyframes
   useEffect(() => {
