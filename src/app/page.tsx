@@ -42,9 +42,10 @@ export default function Home() {
   const [recenterVisible, setRecenterVisible] = useState(false);
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sheetSnap, setSheetSnap] = useState<'collapsed' | 'expanded'>('collapsed');
+  const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 72 : 500);
+  const [sheetTranslate, setSheetTranslate] = useState(getCollapsedTranslate);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef({ startY: 0, startSnap: 'collapsed' as 'collapsed' | 'expanded', dragging: false });
+  const dragState = useRef({ startY: 0, startTranslate: 0, dragging: false });
   const mapRef = useRef<MapViewRef>(null);
   const { detected: clipLocation, dismiss: dismissClip, showButton: showPasteButton } = useClipboardDetection();
   const hasRoute = route && route.waypoints.length > 0;
@@ -121,7 +122,7 @@ export default function Home() {
     setError(''); setLoading(true);
     try {
       const result = await optimizeRoute(customers, driverLocation || startLocation!, locale);
-      setRoute(result); setSheetSnap('expanded');
+      setRoute(result); setSheetTranslate(0);
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
   }, [customers, startLocation, driverLocation, locale, pt]);
@@ -201,12 +202,10 @@ export default function Home() {
   const handleInAppNav = () => { setInAppNav(true); };
 
   // Draggable bottom sheet handlers
-  const SHEET_COLLAPSED = 72;
-  const SHEET_MAX_RATIO = 0.65;
-  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * SHEET_MAX_RATIO - SHEET_COLLAPSED : 500);
+  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 72 : 500);
 
   const handleSheetPointerDown = (e: React.PointerEvent) => {
-    dragState.current = { startY: e.clientY, startSnap: sheetSnap, dragging: true };
+    dragState.current = { startY: e.clientY, startTranslate: sheetTranslate, dragging: true };
     if (sheetRef.current) sheetRef.current.style.transition = 'none';
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
@@ -215,10 +214,8 @@ export default function Home() {
     if (!dragState.current.dragging || !sheetRef.current) return;
     const deltaY = dragState.current.startY - e.clientY;
     const maxT = getMaxTranslate();
-    const startProgress = dragState.current.startSnap === 'expanded' ? 1 : 0;
-    const newProgress = Math.max(0, Math.min(1, startProgress + deltaY / maxT));
-    const translate = maxT * (1 - newProgress);
-    sheetRef.current.style.transform = `translateY(${translate}px)`;
+    const newTranslate = Math.max(0, Math.min(maxT, dragState.current.startTranslate - deltaY));
+    sheetRef.current.style.transform = `translateY(${newTranslate}px)`;
   };
 
   const handleSheetPointerUp = () => {
@@ -226,11 +223,16 @@ export default function Home() {
     dragState.current.dragging = false;
     const maxT = getMaxTranslate();
     const match = sheetRef.current.style.transform.match(/translateY\(([\d.]+)px\)/);
-    const curTranslate = match ? parseFloat(match[1]) : (sheetSnap === 'collapsed' ? maxT : 0);
-    const progress = 1 - curTranslate / maxT;
-    setSheetSnap(progress > 0.35 ? 'expanded' : 'collapsed');
-    sheetRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)';
-    sheetRef.current.style.transform = progress > 0.35 ? 'translateY(0px)' : `translateY(${maxT}px)`;
+    const curTranslate = match ? parseFloat(match[1]) : getCollapsedTranslate();
+    // Stay where released, with auto-snap at edges
+    const clamped = Math.max(0, Math.min(maxT, curTranslate));
+    let target = clamped;
+    const snapThreshold = 20;
+    if (clamped < snapThreshold) target = 0;
+    else if (clamped > maxT - snapThreshold) target = maxT;
+    setSheetTranslate(target);
+    sheetRef.current.style.transition = 'transform 0.2s ease-out';
+    sheetRef.current.style.transform = `translateY(${target}px)`;
   };
 
   const handleLocate = () => {
@@ -297,7 +299,7 @@ export default function Home() {
       {/* ===== Locate button (top-right) ===== */}
       {!inAppNav && (
         <button onClick={() => {
-          if (driverLocation) mapRef.current?.recenter(driverLocation.lat, driverLocation.lng);
+          if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(0); }
           else handleLocate();
         }}
           className="absolute top-4 right-4 z-20 w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
@@ -400,8 +402,8 @@ export default function Home() {
           className="fixed bottom-0 left-0 right-0 z-10 bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50"
           style={{
             height: '65vh',
-            transform: sheetSnap === 'collapsed' ? 'translateY(calc(65vh - 72px))' : 'translateY(0px)',
-            transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+            transform: `translateY(${sheetTranslate}px)`,
+            transition: 'transform 0.2s ease-out',
             touchAction: 'none',
           }}>
           {/* Drag handle + summary (pointer capture area) */}
