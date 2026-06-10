@@ -88,6 +88,9 @@ https://maps.app.goo.gl/abc123`,
     totalDistance: 'Total distance',
     estimatedTime: 'Est. time',
     noRoute: 'Add locations to get started',
+    viewMap: 'Map Only',
+    viewRoute: 'Route Only',
+    viewSplit: 'Split View',
   },
 };
 
@@ -171,6 +174,9 @@ https://maps.app.goo.gl/abc123`,
     totalDistance: 'מרחק כולל',
     estimatedTime: 'זמן משוער',
     noRoute: 'הוסף מיקומים כדי להתחיל',
+    viewMap: 'מפה בלבד',
+    viewRoute: 'מסלול בלבד',
+    viewSplit: 'תצוגה מפוצלת',
   },
 };
 
@@ -254,6 +260,9 @@ https://maps.app.goo.gl/abc123`,
     totalDistance: 'المسافة الإجمالية',
     estimatedTime: 'الوقت المقدر',
     noRoute: 'أضف مواقع للبدء',
+    viewMap: 'الخريطة فقط',
+    viewRoute: 'المسار فقط',
+    viewSplit: 'عرض مقسم',
   },
 };
 

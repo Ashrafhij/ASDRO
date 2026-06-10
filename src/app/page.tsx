@@ -43,6 +43,7 @@ export default function Home() {
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'split' | 'map' | 'route'>('split');
   const mapRef = useRef<MapViewRef>(null);
   const { detected: clipLocation, dismiss: dismissClip, showButton: showPasteButton } = useClipboardDetection();
   const hasRoute = route && route.waypoints.length > 0;
@@ -212,22 +213,24 @@ export default function Home() {
 
   return (
     <div className="h-screen relative overflow-hidden bg-gray-950" dir={dir}>
-      {/* ===== Full-screen map (always visible, fills viewport) ===== */}
-      <div className="absolute inset-0 z-0">
-        <MapView
-          ref={mapRef}
-          waypoints={route?.waypoints || []}
-          customers={customers}
-          driverLocation={driverLocation}
-          startLocation={!driverLocation ? startLocation : null}
-          nextStopId={nextStopId}
-          completedIds={completedIds}
-          skippedIds={skippedIds}
-          followDriver={inAppNav}
-          onManualPan={() => setRecenterVisible(true)}
-          height="100%"
-        />
-      </div>
+      {/* ===== Full-screen map ===== */}
+      {viewMode !== 'route' && (
+        <div className="absolute inset-0 z-0">
+          <MapView
+            ref={mapRef}
+            waypoints={route?.waypoints || []}
+            customers={customers}
+            driverLocation={driverLocation}
+            startLocation={!driverLocation ? startLocation : null}
+            nextStopId={nextStopId}
+            completedIds={completedIds}
+            skippedIds={skippedIds}
+            followDriver={inAppNav}
+            onManualPan={() => setRecenterVisible(true)}
+            height="100%"
+          />
+        </div>
+      )}
 
       {/* ===== Corner menu button (top-left) ===== */}
       <div className="absolute top-4 left-4 z-20">
@@ -254,6 +257,17 @@ export default function Home() {
                 <LanguageSwitcher />
               </div>
               <div className="border-t border-gray-700/50 my-1" />
+              <button onClick={() => { setViewMode(viewMode === 'map' ? 'split' : 'map'); setMenuOpen(false); }}
+                className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3">
+                <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">🗺️</span>
+                {viewMode === 'map' ? pt.viewSplit : pt.viewMap}
+              </button>
+              <button onClick={() => { setViewMode(viewMode === 'route' ? 'split' : 'route'); setMenuOpen(false); }}
+                className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3">
+                <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">📋</span>
+                {viewMode === 'route' ? pt.viewSplit : pt.viewRoute}
+              </button>
+              <div className="border-t border-gray-700/50 my-1" />
               <button onClick={handleClear}
                 className="w-full py-2.5 px-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-3">
                 <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">🗑️</span>
@@ -263,6 +277,16 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {/* ===== Exit single-view mode button ===== */}
+      {viewMode !== 'split' && (
+        <button onClick={() => setViewMode('split')}
+          className="absolute top-4 left-14 z-30 w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-gray-300">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          </svg>
+        </button>
+      )}
 
       {/* ===== Locate button (top-right) ===== */}
       {!inAppNav && (
@@ -290,8 +314,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* ===== In-App Navigation Mode ===== */}
-      {inAppNav && activeWaypoint ? (
+      {/* ===== In-App Navigation Mode or Bottom Sheet ===== */}
+      {viewMode !== 'map' && (inAppNav && activeWaypoint ? (
         <>
           {/* Re-center button */}
           {recenterVisible && driverLocation && (
@@ -488,7 +512,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
