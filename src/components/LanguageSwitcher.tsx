@@ -7,7 +7,7 @@ import { locales } from '@/lib/i18n';
 interface LanguageSwitcherProps {
   onSelect?: () => void;
 }
-
+//ashraf
 export default function LanguageSwitcher({ onSelect }: LanguageSwitcherProps) {
   const { locale, setLocale } = useI18n();
   const [open, setOpen] = useState(false);
