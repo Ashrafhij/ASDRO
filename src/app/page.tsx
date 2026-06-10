@@ -7,7 +7,7 @@ import { optimizeRoute } from '@/lib/optimizer';
 import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
 import { useClipboardDetection } from '@/lib/useClipboardDetection';
-import { reverseGeocode, parseWhatsAppLocation } from '@/lib/geocoding';
+import { reverseGeocode, parseWhatsAppLocation, geocodeAddress } from '@/lib/geocoding';
 import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
 import ClipboardBanner from '@/components/ClipboardBanner';
@@ -42,10 +42,25 @@ export default function Home() {
   const [recenterVisible, setRecenterVisible] = useState(false);
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 72 : 500);
+  const [miniAddress, setMiniAddress] = useState('');
+
+  const handleMiniAdd = async () => {
+    const addr = miniAddress.trim();
+    if (!addr) return;
+    const coordMatch = addr.match(/^(-?\d+\.?\d*)\s*[,，]\s*(-?\d+\.?\d*)$/);
+    const parsedLoc = parseWhatsAppLocation(addr) || (coordMatch ? { lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]) } : null);
+    const loc = parsedLoc || await geocodeAddress(addr);
+    if (!loc) return;
+    const address = parsedLoc ? addr : (await reverseGeocode(loc.lat, loc.lng).catch(() => addr));
+    setCustomers(prev => [...prev, { id: crypto.randomUUID(), name: '', phone: '', location: loc, address, notes: '' }]);
+    setMiniAddress('');
+    setSheetTranslate(getCollapsedTranslate());
+  };
+
+  const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 144 : 500);
   const [sheetTranslate, setSheetTranslate] = useState(getCollapsedTranslate);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef({ startY: 0, startTranslate: 0, dragging: false });
+  const dragState = useRef({ startY: 0, startTranslate: 0, dragging: false, moved: false });
   const mapRef = useRef<MapViewRef>(null);
   const { detected: clipLocation, dismiss: dismissClip, showButton: showPasteButton } = useClipboardDetection();
   const hasRoute = route && route.waypoints.length > 0;
@@ -202,20 +217,31 @@ export default function Home() {
   const handleInAppNav = () => { setInAppNav(true); };
 
   // Draggable bottom sheet handlers
-  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 72 : 500);
+  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.65 - 144 : 500);
 
   const handleSheetPointerDown = (e: React.PointerEvent) => {
-    dragState.current = { startY: e.clientY, startTranslate: sheetTranslate, dragging: true };
+    dragState.current = { startY: e.clientY, startTranslate: sheetTranslate, dragging: true, moved: false };
     if (sheetRef.current) sheetRef.current.style.transition = 'none';
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const handleSheetPointerMove = (e: React.PointerEvent) => {
     if (!dragState.current.dragging || !sheetRef.current) return;
+    dragState.current.moved = true;
     const deltaY = dragState.current.startY - e.clientY;
     const maxT = getMaxTranslate();
     const newTranslate = Math.max(0, Math.min(maxT, dragState.current.startTranslate - deltaY));
     sheetRef.current.style.transform = `translateY(${newTranslate}px)`;
+  };
+
+  const toggleSheet = () => {
+    const maxT = getMaxTranslate();
+    const target = sheetTranslate > maxT / 2 ? 0 : maxT;
+    setSheetTranslate(target);
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = 'transform 0.2s ease-out';
+      sheetRef.current.style.transform = `translateY(${target}px)`;
+    }
   };
 
   const handleSheetPointerUp = () => {
@@ -299,7 +325,7 @@ export default function Home() {
       {/* ===== Locate button (top-right) ===== */}
       {!inAppNav && (
         <button onClick={() => {
-          if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(0); }
+          if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); }
           else handleLocate();
         }}
           className="absolute top-4 right-4 z-20 w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
@@ -411,10 +437,17 @@ export default function Home() {
             onPointerMove={handleSheetPointerMove}
             onPointerUp={handleSheetPointerUp}
             onPointerCancel={handleSheetPointerUp}
+            onClick={() => { if (!dragState.current.moved) toggleSheet(); }}
             className="cursor-grab active:cursor-grabbing select-none">
             {/* Handle bar */}
-            <div className="flex justify-center pt-2.5 pb-1">
+            <div className="flex justify-center pt-2.5 pb-1 relative">
               <div className="w-10 h-1 rounded-full bg-gray-600" />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 transition-transform duration-200"
+                style={{ transform: `rotate(${sheetTranslate < getMaxTranslate() / 2 ? 180 : 0}deg)` }}>
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-500">
+                  <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+                </svg>
+              </div>
             </div>
 
             {/* Summary bar for route */}
@@ -447,8 +480,22 @@ export default function Home() {
             )}
           </div>
 
+          {/* Mini address input always visible */}
+          <div className="px-4 pb-2">
+            <div className="flex gap-2">
+              <input value={miniAddress} onChange={e => setMiniAddress(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleMiniAdd(); }}
+                placeholder={rt.addStop}
+                className="flex-1 px-3 py-2.5 bg-gray-800/70 border border-gray-700/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-blue-500/50 transition-colors" />
+              <button onClick={handleMiniAdd}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-500 transition-all active:scale-95">
+                {t.customerInput.add}
+              </button>
+            </div>
+          </div>
+
           {/* Scrollable content (visible when expanded) */}
-          <div className="overflow-y-auto px-4 pb-6 space-y-4" style={{ height: 'calc(65vh - 72px)' }}>
+          <div className="overflow-y-auto px-4 pb-6 space-y-4" style={{ height: 'calc(65vh - 144px)' }}>
             {hasRoute ? (
               <>
                 {/* Action buttons */}
