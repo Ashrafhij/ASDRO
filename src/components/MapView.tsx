@@ -70,6 +70,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
   const staticGroupRef = useRef<L.LayerGroup | null>(null);
   const manualPanRef = useRef(false);
   const initialFitRef = useRef(true);
+  const followEntryRef = useRef(true);
 
   useImperativeHandle(ref, () => ({
     recenter: (lat: number, lng: number) => {
@@ -170,16 +171,29 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       });
     }
 
-    if (bounds.length > 0) {
+    if (bounds.length > 0 && !followDriver) {
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
     }
   }, [waypoints, customers, startLocation, mt, followDriver, nextStopId, completedIds, skippedIds]);
+
+  // Reset manualPan when entering follow mode
+  useEffect(() => {
+    if (followDriver) {
+      manualPanRef.current = false;
+      followEntryRef.current = true;
+    }
+  }, [followDriver]);
 
   // Follow driver panning
   useEffect(() => {
     if (!followDriver || !driverLocation || !mapRef.current) return;
     if (manualPanRef.current) return;
-    mapRef.current.panTo([driverLocation.lat, driverLocation.lng], { animate: true, duration: 0.5 });
+    if (followEntryRef.current) {
+      followEntryRef.current = false;
+      mapRef.current.setView([driverLocation.lat, driverLocation.lng], 16, { animate: true, duration: 0.5 });
+    } else {
+      mapRef.current.panTo([driverLocation.lat, driverLocation.lng], { animate: true, duration: 0.5 });
+    }
   }, [driverLocation, followDriver]);
 
   // Driver marker (blue dot with heading)
