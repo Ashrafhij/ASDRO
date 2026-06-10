@@ -63,12 +63,13 @@ function formatInstruction(step: { maneuver: { type: string; modifier?: string }
 }
 
 async function getOSRMRoute(start: Location, end: Location, locale?: string, retries = 2): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string } | null> {
-  const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true${locale && ['he', 'ar'].includes(locale) ? `&language=${locale}` : ''}`;
+  const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true`;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url);
       const data = await res.json();
       if (data.code !== 'Ok' || !data.routes?.length) {
+        console.error('OSRM returned error:', data.code, data.message || '', start, end);
         if (attempt < retries) { await new Promise(r => setTimeout(r, 1000)); continue; }
         return null;
       }
