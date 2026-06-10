@@ -41,6 +41,24 @@ export default function Home() {
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
+  const getSnapPoints = () => {
+    const h = typeof window !== 'undefined' ? window.innerHeight : 1000;
+    return { full: 0, half: h * 0.35, collapsed: h * 0.85 - 180 };
+  };
+  const getCurrentTranslate = () => {
+    if (!sheetRef.current) return getCollapsedTranslate();
+    const m = sheetRef.current.style.transform.match(/translateY\(([\d.]+)px\)/);
+    return m ? parseFloat(m[1]) : getCollapsedTranslate();
+  };
+  const snapTo = (target: number) => {
+    const maxT = getMaxTranslate();
+    const clamped = Math.max(0, Math.min(maxT, target));
+    setSheetTranslate(clamped);
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = 'transform 0.3s ease-out';
+      sheetRef.current.style.transform = `translateY(${clamped}px)`;
+    }
+  };
   const [sheetTranslate, setSheetTranslate] = useState(getCollapsedTranslate);
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragState = useRef({ startY: 0, startTranslate: 0, dragging: false, moved: false });
@@ -213,30 +231,26 @@ export default function Home() {
   };
 
   const toggleSheet = () => {
-    const maxT = getMaxTranslate();
-    const target = sheetTranslate > maxT / 2 ? 0 : maxT;
-    setSheetTranslate(target);
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = 'transform 0.2s ease-out';
-      sheetRef.current.style.transform = `translateY(${target}px)`;
-    }
+    const cur = getCurrentTranslate();
+    const snaps = getSnapPoints();
+    const target = cur >= snaps.half ? snaps.full : snaps.collapsed;
+    snapTo(target);
   };
 
   const handleSheetPointerUp = () => {
     if (!dragState.current.dragging || !sheetRef.current) return;
     dragState.current.dragging = false;
-    const maxT = getMaxTranslate();
-    const match = sheetRef.current.style.transform.match(/translateY\(([\d.]+)px\)/);
-    const curTranslate = match ? parseFloat(match[1]) : getCollapsedTranslate();
-    // Stay where released, with auto-snap at edges
-    const clamped = Math.max(0, Math.min(maxT, curTranslate));
-    let target = clamped;
-    const snapThreshold = 20;
-    if (clamped < snapThreshold) target = 0;
-    else if (clamped > maxT - snapThreshold) target = maxT;
-    setSheetTranslate(target);
-    sheetRef.current.style.transition = 'transform 0.2s ease-out';
-    sheetRef.current.style.transform = `translateY(${target}px)`;
+    const curTranslate = getCurrentTranslate();
+    const clamped = Math.max(0, Math.min(getMaxTranslate(), curTranslate));
+    const snaps = getSnapPoints();
+    const values = Object.values(snaps);
+    let target = snaps.collapsed;
+    let minDist = Infinity;
+    for (const val of values) {
+      const dist = Math.abs(val - clamped);
+      if (dist < minDist) { minDist = dist; target = val; }
+    }
+    snapTo(target);
   };
 
   const handleLocate = () => {
@@ -260,7 +274,10 @@ export default function Home() {
           completedIds={completedIds}
           skippedIds={skippedIds}
           followDriver={false}
-          onManualPan={() => {}}
+          onManualPan={() => {
+            const snaps = getSnapPoints();
+            if (Math.abs(getCurrentTranslate() - snaps.collapsed) > 20) snapTo(snaps.collapsed);
+          }}
           height="100%"
         />
       </div>
@@ -330,7 +347,7 @@ export default function Home() {
           style={{
             height: '85vh',
             transform: `translateY(${sheetTranslate}px)`,
-            transition: 'transform 0.2s ease-out',
+            transition: 'transform 0.3s ease-out',
           }}>
           {/* Drag handle + summary (pointer capture area) */}
           <div onPointerDown={handleSheetPointerDown}
@@ -382,7 +399,15 @@ export default function Home() {
           </div>
 
           {/* Scrollable content (visible when expanded) */}
-          <div className="overflow-y-auto overscroll-contain px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 72px)', touchAction: 'pan-y' }}>
+          <div className="overflow-y-auto overscroll-contain px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 72px)', touchAction: 'pan-y' }}
+            onPointerDown={() => {
+              const snaps = getSnapPoints();
+              if (Math.abs(getCurrentTranslate() - snaps.collapsed) < 20) snapTo(snaps.half);
+            }}
+            onWheel={() => {
+              const snaps = getSnapPoints();
+              if (Math.abs(getCurrentTranslate() - snaps.collapsed) < 20) snapTo(snaps.half);
+            }}>
             {hasRoute ? (
               <>
                 {/* Action buttons */}

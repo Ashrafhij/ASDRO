@@ -102,7 +102,8 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     const handler = () => { manualPanRef.current = true; onManualPan?.(); };
     m.on('dragstart', handler);
     m.on('zoomstart', handler);
-    return () => { m.off('dragstart', handler); m.off('zoomstart', handler); };
+    m.on('wheel', handler);
+    return () => { m.off('dragstart', handler); m.off('zoomstart', handler); m.off('wheel', handler); };
   }, [onManualPan]);
 
   // Render stops (either route waypoints or pre-route customer markers) + polylines + fit bounds
