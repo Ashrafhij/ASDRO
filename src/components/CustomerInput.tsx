@@ -1,9 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Customer, Location } from '@/lib/types';
 import { useI18n } from '@/lib/i18n-context';
 import { parseGoogleMapsLink, parseWhatsAppLocation, geocodeAddress } from '@/lib/geocoding';
+
+interface Suggestion {
+  display_name: string;
+  lat: string;
+  lon: string;
+}
 
 interface CustomerInputProps {
   customers: Customer[];
@@ -18,6 +24,85 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
   const [showBulk, setShowBulk] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [error, setError] = useState('');
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pendingRef = useRef<{ location: Location; address: string } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (inputRef.current && !inputRef.current.parentElement?.contains(target) &&
+          listRef.current && !listRef.current.contains(target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const fetchSuggestions = async (query: string) => {
+    if (query.trim().length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+        { headers: { 'User-Agent': 'ASDRO/1.0' } }
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setSuggestions(data);
+        setShowSuggestions(true);
+        setActiveIdx(-1);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocationInput(value);
+    pendingRef.current = null;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(value), 250);
+  };
+
+  const selectSuggestion = (s: Suggestion) => {
+    setLocationInput(s.display_name);
+    setShowSuggestions(false);
+    pendingRef.current = {
+      location: { lat: parseFloat(s.lat), lng: parseFloat(s.lon) },
+      address: s.display_name,
+    };
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) {
+      if (e.key === 'Enter') addLocation();
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIdx(prev => (prev < suggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIdx(prev => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIdx >= 0 && activeIdx < suggestions.length) {
+        selectSuggestion(suggestions[activeIdx]);
+      } else {
+        addLocation();
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  };
 
   const resolveLocation = async (input: string): Promise<{ location: Location; address: string } | null> => {
     const trimmed = input.trim();
@@ -34,6 +119,14 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
 
   const addLocation = async () => {
     if (!locationInput.trim()) { setError(ct.errorLocation); return; }
+    if (pendingRef.current) {
+      const customer: Customer = {
+        id: crypto.randomUUID(), name: '', phone: '',
+        location: pendingRef.current.location, address: pendingRef.current.address, notes: '',
+      };
+      onChange([...customers, customer]);
+      setLocationInput(''); pendingRef.current = null; setError(''); return;
+    }
     setError(''); setParsing(true);
     const startTime = Date.now();
     const resolved = await resolveLocation(locationInput);
@@ -79,11 +172,28 @@ export default function CustomerInput({ customers, onChange }: CustomerInputProp
         </div>
       )}
 
-      <div className="flex gap-2">
-        <input type="text" placeholder={ct.location} value={locationInput}
-          onChange={e => setLocationInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && addLocation()}
-          className="flex-1 px-3.5 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none" />
+      <div className="relative flex gap-2">
+        <div className="relative flex-1">
+          <input ref={inputRef} type="text" placeholder={ct.location} value={locationInput}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+            className="w-full px-3.5 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none" />
+          {showSuggestions && suggestions.length > 0 && (
+            <div ref={listRef}
+              className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-600/50 rounded-xl shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto">
+              {suggestions.map((s, i) => (
+                <button key={i} onClick={() => selectSuggestion(s)}
+                  onMouseEnter={() => setActiveIdx(i)}
+                  className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${
+                    i === activeIdx ? 'bg-blue-600/30 text-white' : 'text-gray-300 hover:bg-white/5'
+                  }`}>
+                  <span className="line-clamp-2">{s.display_name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button onClick={addLocation} disabled={parsing}
           className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 min-w-[80px]">
           {parsing ? (

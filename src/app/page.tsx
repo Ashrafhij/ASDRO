@@ -41,9 +41,10 @@ export default function Home() {
   const [inAppNav, setInAppNav] = useState(false);
   const [recenterVisible, setRecenterVisible] = useState(false);
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
-  const [sheetExpanded, setSheetExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'split' | 'map' | 'route'>('split');
+  const [sheetSnap, setSheetSnap] = useState<'collapsed' | 'expanded'>('collapsed');
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef({ startY: 0, startSnap: 'collapsed' as 'collapsed' | 'expanded', dragging: false });
   const mapRef = useRef<MapViewRef>(null);
   const { detected: clipLocation, dismiss: dismissClip, showButton: showPasteButton } = useClipboardDetection();
   const hasRoute = route && route.waypoints.length > 0;
@@ -58,11 +59,6 @@ export default function Home() {
   useEffect(() => { save('route', route); }, [route]);
   useEffect(() => { save('completed', [...completedIds]); }, [completedIds]);
   useEffect(() => { save('skipped', [...skippedIds]); }, [skippedIds]);
-
-  // Auto-expand sheet when route is generated
-  useEffect(() => {
-    if (hasRoute) setSheetExpanded(true);
-  }, [hasRoute]);
 
   // Check for incoming shared location from Web Share Target
   useEffect(() => {
@@ -125,7 +121,7 @@ export default function Home() {
     setError(''); setLoading(true);
     try {
       const result = await optimizeRoute(customers, driverLocation || startLocation!, locale);
-      setRoute(result); setSheetExpanded(true);
+      setRoute(result); setSheetSnap('expanded');
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
   }, [customers, startLocation, driverLocation, locale, pt]);
@@ -202,7 +198,40 @@ export default function Home() {
     setMenuOpen(false);
   };
 
-  const handleInAppNav = () => { setInAppNav(true); setSheetExpanded(false); };
+  const handleInAppNav = () => { setInAppNav(true); };
+
+  // Draggable bottom sheet handlers
+  const SHEET_COLLAPSED = 72;
+  const SHEET_MAX_RATIO = 0.65;
+  const getMaxTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * SHEET_MAX_RATIO - SHEET_COLLAPSED : 500);
+
+  const handleSheetPointerDown = (e: React.PointerEvent) => {
+    dragState.current = { startY: e.clientY, startSnap: sheetSnap, dragging: true };
+    if (sheetRef.current) sheetRef.current.style.transition = 'none';
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleSheetPointerMove = (e: React.PointerEvent) => {
+    if (!dragState.current.dragging || !sheetRef.current) return;
+    const deltaY = dragState.current.startY - e.clientY;
+    const maxT = getMaxTranslate();
+    const startProgress = dragState.current.startSnap === 'expanded' ? 1 : 0;
+    const newProgress = Math.max(0, Math.min(1, startProgress + deltaY / maxT));
+    const translate = maxT * (1 - newProgress);
+    sheetRef.current.style.transform = `translateY(${translate}px)`;
+  };
+
+  const handleSheetPointerUp = () => {
+    if (!dragState.current.dragging || !sheetRef.current) return;
+    dragState.current.dragging = false;
+    const maxT = getMaxTranslate();
+    const match = sheetRef.current.style.transform.match(/translateY\(([\d.]+)px\)/);
+    const curTranslate = match ? parseFloat(match[1]) : (sheetSnap === 'collapsed' ? maxT : 0);
+    const progress = 1 - curTranslate / maxT;
+    setSheetSnap(progress > 0.35 ? 'expanded' : 'collapsed');
+    sheetRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)';
+    sheetRef.current.style.transform = progress > 0.35 ? 'translateY(0px)' : `translateY(${maxT}px)`;
+  };
 
   const handleLocate = () => {
     setLocating(true); setMenuOpen(false);
@@ -214,23 +243,21 @@ export default function Home() {
   return (
     <div className="h-screen relative overflow-hidden bg-gray-950" dir={dir}>
       {/* ===== Full-screen map ===== */}
-      {viewMode !== 'route' && (
-        <div className="absolute inset-0 z-0">
-          <MapView
-            ref={mapRef}
-            waypoints={route?.waypoints || []}
-            customers={customers}
-            driverLocation={driverLocation}
-            startLocation={!driverLocation ? startLocation : null}
-            nextStopId={nextStopId}
-            completedIds={completedIds}
-            skippedIds={skippedIds}
-            followDriver={inAppNav}
-            onManualPan={() => setRecenterVisible(true)}
-            height="100%"
-          />
-        </div>
-      )}
+      <div className="absolute inset-0 z-0">
+        <MapView
+          ref={mapRef}
+          waypoints={route?.waypoints || []}
+          customers={customers}
+          driverLocation={driverLocation}
+          startLocation={!driverLocation ? startLocation : null}
+          nextStopId={nextStopId}
+          completedIds={completedIds}
+          skippedIds={skippedIds}
+          followDriver={inAppNav}
+          onManualPan={() => setRecenterVisible(true)}
+          height="100%"
+        />
+      </div>
 
       {/* ===== Corner menu button (top-left) ===== */}
       <div className="absolute top-4 left-4 z-20">
@@ -257,17 +284,6 @@ export default function Home() {
                 <LanguageSwitcher />
               </div>
               <div className="border-t border-gray-700/50 my-1" />
-              <button onClick={() => { setViewMode(viewMode === 'map' ? 'split' : 'map'); setMenuOpen(false); }}
-                className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3">
-                <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">🗺️</span>
-                {viewMode === 'map' ? pt.viewSplit : pt.viewMap}
-              </button>
-              <button onClick={() => { setViewMode(viewMode === 'route' ? 'split' : 'route'); setMenuOpen(false); }}
-                className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3">
-                <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">📋</span>
-                {viewMode === 'route' ? pt.viewSplit : pt.viewRoute}
-              </button>
-              <div className="border-t border-gray-700/50 my-1" />
               <button onClick={handleClear}
                 className="w-full py-2.5 px-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-3">
                 <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">🗑️</span>
@@ -277,16 +293,6 @@ export default function Home() {
           </>
         )}
       </div>
-
-      {/* ===== Exit single-view mode button ===== */}
-      {viewMode !== 'split' && (
-        <button onClick={() => setViewMode('split')}
-          className="absolute top-4 left-14 z-30 w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
-          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-gray-300">
-            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-          </svg>
-        </button>
-      )}
 
       {/* ===== Locate button (top-right) ===== */}
       {!inAppNav && (
@@ -314,8 +320,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* ===== In-App Navigation Mode or Bottom Sheet ===== */}
-      {viewMode !== 'map' && (inAppNav && activeWaypoint ? (
+      {/* ===== In-App Navigation Mode (full-screen overlay) ===== */}
+      {inAppNav && activeWaypoint ? (
         <>
           {/* Re-center button */}
           {recenterVisible && driverLocation && (
@@ -389,19 +395,29 @@ export default function Home() {
           </div>
         </>
       ) : (
-        /* ===== Bottom Sheet ===== */
-        <div className="absolute bottom-0 left-0 right-0 z-10">
-          <div className={`bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50 transition-all duration-300 ease-out ${
-            hasRoute && !sheetExpanded ? '' : ''
-          }`}>
+        /* ===== Draggable Bottom Sheet ===== */
+        <div ref={sheetRef}
+          className="fixed bottom-0 left-0 right-0 z-10 bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50"
+          style={{
+            height: '65vh',
+            transform: sheetSnap === 'collapsed' ? 'translateY(calc(65vh - 72px))' : 'translateY(0px)',
+            transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+            touchAction: 'none',
+          }}>
+          {/* Drag handle + summary (pointer capture area) */}
+          <div onPointerDown={handleSheetPointerDown}
+            onPointerMove={handleSheetPointerMove}
+            onPointerUp={handleSheetPointerUp}
+            onPointerCancel={handleSheetPointerUp}
+            className="cursor-grab active:cursor-grabbing select-none">
             {/* Handle bar */}
-            <div className="flex justify-center pt-2.5 pb-1 cursor-pointer" onClick={() => hasRoute && setSheetExpanded(!sheetExpanded)}>
-              <div className="w-10 h-1 rounded-full bg-gray-600 hover:bg-gray-500 transition-colors" />
+            <div className="flex justify-center pt-2.5 pb-1">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
             </div>
 
-            {/* Always-visible summary bar for route */}
+            {/* Summary bar for route */}
             {hasRoute && (
-              <div className="px-4 pb-3 cursor-pointer" onClick={() => setSheetExpanded(!sheetExpanded)}>
+              <div className="px-4 pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 text-sm">
                     <span className="text-gray-100 font-semibold">{sortedWps.length} {rt.stops}</span>
@@ -419,7 +435,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* Always-visible summary for no-route */}
+            {/* Summary for no-route */}
             {!hasRoute && (
               <div className="px-4 pb-1">
                 <div className="flex items-center gap-2">
@@ -427,92 +443,88 @@ export default function Home() {
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Expanded content */}
-            <div className={`overflow-y-auto transition-all duration-300 ${
-              (hasRoute && !sheetExpanded) ? 'max-h-0' : 'max-h-[55vh]'
-            }`}>
-              <div className="px-4 pb-6 space-y-4">
-                {hasRoute ? (
-                  <>
-                    {/* Action buttons */}
-                    <div className="flex gap-2">
-                      <button onClick={optimize} disabled={loading}
-                        className="flex-1 py-3 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] border border-gray-600/50 flex items-center justify-center gap-2 disabled:opacity-40">
-                        {loading ? (
-                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <><span className="text-base">🔄</span> {pt.reoptimize}</>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Error display */}
-                    {error && (
-                      <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
-                        <span>⚠️</span> {error}
-                      </div>
+          {/* Scrollable content (visible when expanded) */}
+          <div className="overflow-y-auto px-4 pb-6 space-y-4" style={{ height: 'calc(65vh - 72px)' }}>
+            {hasRoute ? (
+              <>
+                {/* Action buttons */}
+                <div className="flex gap-2 pt-2">
+                  <button onClick={optimize} disabled={loading}
+                    className="flex-1 py-3 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] border border-gray-600/50 flex items-center justify-center gap-2 disabled:opacity-40">
+                    {loading ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <><span className="text-base">🔄</span> {pt.reoptimize}</>
                     )}
+                  </button>
+                </div>
 
-                    {/* Full route details */}
-                    <div className="pt-2 border-t border-gray-700/30">
-                      <RouteList
-                        waypoints={route!.waypoints}
-                        totalDistance={route!.totalDistance}
-                        totalDuration={route!.totalDuration}
-                        completedIds={completedIds}
-                        skippedIds={skippedIds}
-                        onMarkComplete={handleMarkComplete}
-                        onUndoComplete={handleUndoComplete}
-                        onSkip={handleSkip}
-                        onUnskip={handleUnskip}
-                        onNavigateInApp={handleInAppNav}
-                      />
-                      <button onClick={handleClear}
-                        className="w-full mt-4 py-2.5 text-xs text-gray-500 hover:text-red-400 rounded-xl border border-dashed border-gray-700/50 hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 hover:bg-red-500/10">
-                        🗑️ {pt.clearAll}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {showPasteButton && (
-                      <button onClick={handleManualPaste} disabled={pasting}
-                        className="w-full py-2.5 bg-gray-800/50 hover:bg-gray-800 text-gray-300 text-xs font-semibold rounded-xl border border-gray-700/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
-                        {pasting ? (
-                          <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
-                        ) : (
-                          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
-                        )}
-                        {t.detection.pasteLocation}
-                      </button>
-                    )}
-
-                    {error && (
-                      <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
-                        <span>⚠️</span> {error}
-                      </div>
-                    )}
-
-                    <CustomerInput customers={customers} onChange={setCustomers} />
-
-                    {customers.length > 0 && (
-                      <button onClick={optimize} disabled={loading || (!driverLocation && !startLocation)}
-                        className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2.5">
-                        {loading ? (
-                          <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
-                        ) : (
-                          <><span className="text-base">🚀</span> {pt.optimizeRoute}</>
-                        )}
-                      </button>
-                    )}
-                  </>
+                {/* Error display */}
+                {error && (
+                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                    <span>⚠️</span> {error}
+                  </div>
                 )}
-              </div>
-            </div>
+
+                {/* Full route details */}
+                <div className="pt-2 border-t border-gray-700/30">
+                  <RouteList
+                    waypoints={route!.waypoints}
+                    totalDistance={route!.totalDistance}
+                    totalDuration={route!.totalDuration}
+                    completedIds={completedIds}
+                    skippedIds={skippedIds}
+                    onMarkComplete={handleMarkComplete}
+                    onUndoComplete={handleUndoComplete}
+                    onSkip={handleSkip}
+                    onUnskip={handleUnskip}
+                    onNavigateInApp={handleInAppNav}
+                  />
+                  <button onClick={handleClear}
+                    className="w-full mt-4 py-2.5 text-xs text-gray-500 hover:text-red-400 rounded-xl border border-dashed border-gray-700/50 hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 hover:bg-red-500/10">
+                    🗑️ {pt.clearAll}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {showPasteButton && (
+                  <button onClick={handleManualPaste} disabled={pasting}
+                    className="w-full py-2.5 bg-gray-800/50 hover:bg-gray-800 text-gray-300 text-xs font-semibold rounded-xl border border-gray-700/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
+                    {pasting ? (
+                      <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 fill-gray-400"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
+                    )}
+                    {t.detection.pasteLocation}
+                  </button>
+                )}
+
+                {error && (
+                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                    <span>⚠️</span> {error}
+                  </div>
+                )}
+
+                <CustomerInput customers={customers} onChange={setCustomers} />
+
+                {customers.length > 0 && (
+                  <button onClick={optimize} disabled={loading || (!driverLocation && !startLocation)}
+                    className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2.5">
+                    {loading ? (
+                      <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
+                    ) : (
+                      <><span className="text-base">🚀</span> {pt.optimizeRoute}</>
+                    )}
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
