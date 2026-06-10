@@ -382,7 +382,7 @@ export default function Home() {
           </div>
 
           {/* Scrollable content (visible when expanded) */}
-          <div className="overflow-y-auto px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 72px)' }}>
+          <div className="overflow-y-auto overscroll-contain px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 72px)' }} onTouchMove={e => e.stopPropagation()}>
             {hasRoute ? (
               <>
                 {/* Action buttons */}
