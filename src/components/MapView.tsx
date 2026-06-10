@@ -180,7 +180,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       });
     }
 
-    if (bounds.length > 0 && !followDriver) {
+    if (bounds.length > 0 && !followDriver && !manualPanRef.current) {
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
     }
   }, [waypoints, customers, startLocation, mt, followDriver, nextStopId, completedIds, skippedIds]);
