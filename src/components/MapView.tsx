@@ -79,6 +79,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     }
   }), []);
 
+  // Map creation (stable — runs once)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, { zoomControl: true, zoom: 13 }).setView([32.0, 34.8], 10);
@@ -86,14 +87,22 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map);
-    map.on('dragstart', () => { manualPanRef.current = true; onManualPan?.(); });
-    map.on('zoomstart', () => { manualPanRef.current = true; onManualPan?.(); });
     const group = L.layerGroup().addTo(map);
     staticGroupRef.current = group;
     mapRef.current = map;
     const observer = new ResizeObserver(() => map.invalidateSize());
     observer.observe(containerRef.current);
     return () => { observer.disconnect(); map.remove(); mapRef.current = null; };
+  }, []);
+
+  // Event listeners (updatable — re-binds when onManualPan changes)
+  useEffect(() => {
+    const m = mapRef.current;
+    if (!m) return;
+    const handler = () => { manualPanRef.current = true; onManualPan?.(); };
+    m.on('dragstart', handler);
+    m.on('zoomstart', handler);
+    return () => { m.off('dragstart', handler); m.off('zoomstart', handler); };
   }, [onManualPan]);
 
   // Render stops (either route waypoints or pre-route customer markers) + polylines + fit bounds
