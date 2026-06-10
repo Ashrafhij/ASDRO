@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Waypoint, Location } from '@/lib/types';
 import { useI18n } from '@/lib/i18n-context';
 import type { Dict } from '@/lib/i18n';
@@ -85,7 +86,7 @@ export default function RouteList({
   return (
     <>
       {/* Nav picker bottom sheet */}
-      {navLocation && (
+      {navLocation && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={closePicker}>
           <div className="w-full max-w-sm bg-gray-800 rounded-t-3xl p-5 pb-8 space-y-2 animate-slide-up shadow-2xl border border-gray-700/50 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-center mb-2">
@@ -110,7 +111,8 @@ export default function RouteList({
               {np.cancel}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="space-y-4">
