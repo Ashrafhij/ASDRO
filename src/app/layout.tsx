@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { I18nProvider } from '@/lib/i18n-context';
 import PwaRegister from '@/components/PwaRegister';
+import AnalyticsPing from '@/components/AnalyticsPing';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <I18nProvider>{children}</I18nProvider>
         <PwaRegister />
+        <AnalyticsPing />
       </body>
     </html>
   );
