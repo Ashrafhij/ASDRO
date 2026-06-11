@@ -1,8 +1,11 @@
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+
 export const dynamic = 'force-dynamic';
 
 async function getDb(): Promise<D1Database | null> {
   try {
-    return (process.env as any).asdro_db ?? null;
+    const { env } = await getCloudflareContext({ async: true });
+    return (env as any).asdro_db ?? null;
   } catch {
     return null;
   }

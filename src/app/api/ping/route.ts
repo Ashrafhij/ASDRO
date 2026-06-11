@@ -1,3 +1,5 @@
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+
 const TABLE = `CREATE TABLE IF NOT EXISTS visits (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id TEXT NOT NULL,
@@ -7,7 +9,8 @@ const TABLE = `CREATE TABLE IF NOT EXISTS visits (
 
 async function getDb(): Promise<D1Database | null> {
   try {
-    return (process.env as any).asdro_db ?? null;
+    const { env } = await getCloudflareContext({ async: true });
+    return (env as any).asdro_db ?? null;
   } catch {
     return null;
   }
