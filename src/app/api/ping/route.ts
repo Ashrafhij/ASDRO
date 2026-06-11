@@ -7,7 +7,7 @@ const TABLE = `CREATE TABLE IF NOT EXISTS visits (
 
 async function getDb(): Promise<D1Database | null> {
   try {
-    return (process.env as any).DB ?? null;
+    return (process.env as any).asdro_db ?? null;
   } catch {
     return null;
   }

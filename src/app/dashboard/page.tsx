@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 async function getDb(): Promise<D1Database | null> {
   try {
-    return (process.env as any).DB ?? null;
+    return (process.env as any).asdro_db ?? null;
   } catch {
     return null;
   }
