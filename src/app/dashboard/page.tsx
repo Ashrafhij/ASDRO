@@ -1,5 +1,6 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import ClearAnalyticsButton from '@/components/ClearAnalyticsButton';
+import type { ReactNode } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,7 @@ async function getDb(): Promise<D1Database | null> {
 type StatRow = { count: number };
 type DayRow = { day: string; count: number };
 type BreakdownRow = { key: string; count: number };
-type DeviceRow = { device_id: string; last_seen: string; visit_count: number; browser: string | null; os: string | null; screen_width: number | null; screen_height: number | null; is_pwa: number | null; language: string | null; timezone: string | null; page: string | null };
+type DeviceRow = { device_id: string; last_seen: string; visit_count: number; browser: string | null; os: string | null; os_version: string | null; device_model: string | null; screen_width: number | null; screen_height: number | null; screen_density: number | null; is_pwa: number | null; language: string | null; timezone: string | null; cpu_cores: number | null; connection_type: string | null };
 type EventRow = { event_name: string; count: number };
 
 const DEVICE_COLORS = [
@@ -84,19 +85,20 @@ export default async function DashboardPage() {
     // table already exists
   }
 
-  const [totalDevices, totalVisits, recentVisits, todayVisits, dayStats, devices, browsers, oss, pwaStats, languages, timezones, events] = await Promise.all([
+  const [totalDevices, totalVisits, recentVisits, todayVisits, dayStats, devices, browsers, oss, pwaStats, languages, timezones, events, connectionTypes] = await Promise.all([
     db.prepare('SELECT COUNT(DISTINCT device_id) as count FROM visits').all<StatRow>(),
     db.prepare('SELECT COUNT(*) as count FROM visits').all<StatRow>(),
     db.prepare("SELECT COUNT(*) as count FROM visits WHERE visited_at > datetime('now', '-7 days')").all<StatRow>(),
     db.prepare("SELECT COUNT(*) as count FROM visits WHERE visited_at > datetime('now', 'start of day')").all<StatRow>(),
     db.prepare("SELECT date(visited_at) as day, COUNT(*) as count FROM visits WHERE visited_at > datetime('now', '-30 days') GROUP BY day ORDER BY day DESC").all<DayRow>(),
-    db.prepare("SELECT device_id, MAX(visited_at) as last_seen, COUNT(*) as visit_count, MAX(browser) as browser, MAX(os) as os, MAX(screen_width) as screen_width, MAX(screen_height) as screen_height, MAX(is_pwa) as is_pwa, MAX(language) as language, MAX(timezone) as timezone FROM visits GROUP BY device_id ORDER BY last_seen DESC LIMIT 50").all<any>(),
+    db.prepare("SELECT device_id, MAX(visited_at) as last_seen, COUNT(*) as visit_count, MAX(browser) as browser, MAX(os) as os, MAX(os_version) as os_version, MAX(device_model) as device_model, MAX(screen_width) as screen_width, MAX(screen_height) as screen_height, MAX(screen_density) as screen_density, MAX(is_pwa) as is_pwa, MAX(language) as language, MAX(timezone) as timezone, MAX(cpu_cores) as cpu_cores, MAX(connection_type) as connection_type FROM visits GROUP BY device_id ORDER BY last_seen DESC LIMIT 50").all<any>(),
     db.prepare('SELECT browser as key, COUNT(*) as count FROM visits WHERE browser IS NOT NULL GROUP BY browser ORDER BY count DESC').all<BreakdownRow>(),
     db.prepare('SELECT os as key, COUNT(*) as count FROM visits WHERE os IS NOT NULL GROUP BY os ORDER BY count DESC').all<BreakdownRow>(),
     db.prepare('SELECT is_pwa as key, COUNT(*) as count FROM visits GROUP BY is_pwa').all<any>(),
     db.prepare("SELECT language as key, COUNT(*) as count FROM visits WHERE language IS NOT NULL GROUP BY language ORDER BY count DESC").all<BreakdownRow>(),
     db.prepare("SELECT timezone as key, COUNT(*) as count FROM visits WHERE timezone IS NOT NULL GROUP BY timezone ORDER BY count DESC").all<BreakdownRow>(),
     db.prepare("SELECT event_name, COUNT(*) as count FROM events GROUP BY event_name ORDER BY count DESC").all<EventRow>(),
+    db.prepare("SELECT connection_type as key, COUNT(*) as count FROM visits WHERE connection_type IS NOT NULL AND connection_type != '' GROUP BY connection_type ORDER BY count DESC").all<BreakdownRow>(),
   ]);
 
   const totalDev = totalDevices.results[0]?.count ?? 0;
@@ -162,6 +164,9 @@ export default async function DashboardPage() {
         )}
         {timezones.results.length > 0 && (
           <BreakdownCard title="Timezone" items={timezones.results.map(tz => ({ label: tz.key, count: tz.count, total: totalVisit }))} />
+        )}
+        {connectionTypes.results.length > 0 && (
+          <BreakdownCard title="Connection" items={connectionTypes.results.map(ct => ({ label: ct.key.toUpperCase(), count: ct.count, total: totalVisit }))} />
         )}
       </div>
 
@@ -316,10 +321,14 @@ function DevicesSection({ devices }: { devices: any[] }) {
                 <span className="text-xs text-gray-300 font-medium tabular-nums">{d.visit_count}×</span>
               </div>
               <div className="flex gap-1.5 mt-1.5 ml-5 flex-wrap">
+                {d.os && <Badge>{d.os}{d.os_version ? ` ${d.os_version}` : ''}</Badge>}
+                {d.device_model && <Badge>{d.device_model}</Badge>}
                 {d.browser && <Badge>{d.browser}</Badge>}
-                {d.os && <Badge>{d.os}</Badge>}
                 {dt && <Badge>{dt}</Badge>}
                 {d.is_pwa === 1 && <Badge>PWA</Badge>}
+                {d.cpu_cores && <Badge>{d.cpu_cores} cores</Badge>}
+                {d.connection_type && <Badge>{d.connection_type.toUpperCase()}</Badge>}
+                {d.screen_density && <Badge>{d.screen_density}×</Badge>}
                 {d.language && <Badge>{d.language}</Badge>}
                 {d.timezone && <Badge>{d.timezone}</Badge>}
               </div>
@@ -331,7 +340,7 @@ function DevicesSection({ devices }: { devices: any[] }) {
   );
 }
 
-function Badge({ children }: { children: string }) {
+function Badge({ children }: { children: ReactNode }) {
   return (
     <span className="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded-md border border-gray-700/50">
       {children}
