@@ -91,6 +91,9 @@ https://maps.app.goo.gl/abc123`,
     viewMap: 'Map Only',
     viewRoute: 'Route Only',
     viewSplit: 'Split View',
+    preview: 'Preview',
+    accept: 'Accept',
+    cancel: 'Cancel',
   },
 };
 
@@ -177,6 +180,9 @@ https://maps.app.goo.gl/abc123`,
     viewMap: 'מפה בלבד',
     viewRoute: 'מסלול בלבד',
     viewSplit: 'תצוגה מפוצלת',
+    preview: 'תצוגה מקדימה',
+    accept: 'אישור',
+    cancel: 'ביטול',
   },
 };
 
@@ -263,6 +269,9 @@ https://maps.app.goo.gl/abc123`,
     viewMap: 'الخريطة فقط',
     viewRoute: 'المسار فقط',
     viewSplit: 'عرض مقسم',
+    preview: 'معاينة',
+    accept: 'قبول',
+    cancel: 'إلغاء',
   },
 };
 

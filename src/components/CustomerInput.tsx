@@ -14,10 +14,12 @@ interface Suggestion {
 interface CustomerInputProps {
   customers: Customer[];
   onChange: (customers: Customer[]) => void;
+  onAdd?: (customer: Customer) => void;
   onFocus?: () => void;
+  newlyAddedId?: string | null;
 }
 
-export default function CustomerInput({ customers, onChange, onFocus: onFocusProp }: CustomerInputProps) {
+export default function CustomerInput({ customers, onChange, onAdd, onFocus: onFocusProp, newlyAddedId }: CustomerInputProps) {
   const { t, locale } = useI18n();
   const ct = t.customerInput;
   const [locationInput, setLocationInput] = useState('');
@@ -123,7 +125,7 @@ export default function CustomerInput({ customers, onChange, onFocus: onFocusPro
         id: crypto.randomUUID(), name: '', phone: '',
         location: pendingRef.current.location, address: pendingRef.current.address, notes: '',
       };
-      onChange([...customers, customer]);
+      onAdd?.(customer);
       setLocationInput(''); pendingRef.current = null; setError(''); return;
     }
     setError(''); setParsing(true);
@@ -136,7 +138,7 @@ export default function CustomerInput({ customers, onChange, onFocus: onFocusPro
       id: crypto.randomUUID(), name: '', phone: '',
       location: resolved.location, address: resolved.address, notes: '',
     };
-    onChange([...customers, customer]);
+    onAdd?.(customer);
     setLocationInput(''); setParsing(false);
   };
 
@@ -183,7 +185,9 @@ export default function CustomerInput({ customers, onChange, onFocus: onFocusPro
       {customers.length > 0 && (
         <div className="space-y-1 max-h-56 overflow-y-auto">
           {customers.map((c, i) => (
-            <div key={c.id} className="flex items-center gap-2.5 bg-gray-800/50 border border-gray-700/50 px-3.5 py-2.5 rounded-xl text-sm">
+            <div key={c.id} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm transition-all ${
+              c.id === newlyAddedId ? 'bg-emerald-500/20 border border-emerald-400/40 animate-pulse' : 'bg-gray-800/50 border border-gray-700/50'
+            }`}>
               <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-[11px] font-bold flex items-center justify-center">
                 {i + 1}
               </span>

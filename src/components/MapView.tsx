@@ -21,6 +21,7 @@ interface MapViewProps {
   nextStopId?: string | null;
   completedIds?: Set<string>;
   skippedIds?: Set<string>;
+  pendingCustomer?: Customer | null;
 }
 
 function addRoutePolyline(group: L.LayerGroup, coords: [number, number][], weight: number, color: string, opacity: number, dashed: boolean) {
@@ -60,7 +61,7 @@ function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, g
 
 export default forwardRef<MapViewRef, MapViewProps>(function MapView({
   waypoints, customers = [], driverLocation, startLocation, height = '100%', followDriver, onManualPan,
-  nextStopId, completedIds, skippedIds,
+  nextStopId, completedIds, skippedIds, pendingCustomer,
 }, ref) {
   const { t } = useI18n();
   const mt = t.map;
@@ -129,6 +130,18 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       bounds.push([startLocation.lat, startLocation.lng]);
     }
 
+    if (pendingCustomer) {
+      const icon = L.divIcon({
+        html: `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);border:3px solid #fff;box-shadow:0 0 24px rgba(245,158,11,0.7);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;color:#fff">+</div>`,
+        className: '', iconSize: [36, 36], iconAnchor: [18, 18],
+      });
+      L.marker([pendingCustomer.location.lat, pendingCustomer.location.lng], { icon, zIndexOffset: 1000 })
+        .addTo(group)
+        .bindPopup(`<b>${pendingCustomer.address || 'New stop'}</b>`);
+      bounds.push([pendingCustomer.location.lat, pendingCustomer.location.lng]);
+      map.setView([pendingCustomer.location.lat, pendingCustomer.location.lng], 16, { animate: true });
+    }
+
     if (sorted.length > 0) {
       // Route waypoints
       sorted.forEach((wp, i) => {
@@ -184,7 +197,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     if (bounds.length > 0 && !followDriver && !manualPanRef.current) {
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
     }
-  }, [waypoints, customers, startLocation, mt, followDriver, nextStopId, completedIds, skippedIds]);
+  }, [waypoints, customers, startLocation, mt, followDriver, nextStopId, completedIds, skippedIds, pendingCustomer]);
 
   // Reset manualPan when entering follow mode
   useEffect(() => {

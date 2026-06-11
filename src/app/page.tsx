@@ -40,6 +40,8 @@ export default function Home() {
   const [locating, setLocating] = useState(true);
   const [shareLocation, setShareLocation] = useState<{ location: Location; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingCustomer, setPendingCustomer] = useState<Customer | null>(null);
+  const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
   const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
   const getSnapPoints = () => {
     const h = typeof window !== 'undefined' ? window.innerHeight : 1000;
@@ -73,6 +75,7 @@ export default function Home() {
   useEffect(() => { save('route', route); }, [route]);
   useEffect(() => { save('completed', [...completedIds]); }, [completedIds]);
   useEffect(() => { save('skipped', [...skippedIds]); }, [skippedIds]);
+  useEffect(() => { if (newlyAddedId) { const t = setTimeout(() => setNewlyAddedId(null), 3000); return () => clearTimeout(t); } }, [newlyAddedId]);
 
   // Check for incoming shared location from Web Share Target
   useEffect(() => {
@@ -92,7 +95,7 @@ export default function Home() {
       id: crypto.randomUUID(), name: '', phone: '',
       location: loc, address, notes: '',
     };
-    setCustomers(prev => [...prev, newCustomer]);
+    setPendingCustomer(newCustomer);
     setShareLocation(null);
     dismissClip();
   }, [dismissClip]);
@@ -110,13 +113,46 @@ export default function Home() {
         id: crypto.randomUUID(), name: '', phone: '',
         location, address, notes: '',
       };
-      setCustomers(prev => [...prev, newCustomer]);
+      setPendingCustomer(newCustomer);
       setPasting(false);
     } catch {
       setError('Could not read clipboard. ASDRO needs HTTPS or a user gesture.');
       setPasting(false);
     }
   }, []);
+
+  const handlePendingAdd = useCallback((customer: Customer) => {
+    setPendingCustomer(customer);
+  }, []);
+
+  const handleAccept = useCallback(() => {
+    if (!pendingCustomer) return;
+    const id = pendingCustomer.id;
+    setCustomers(prev => [...prev, pendingCustomer!]);
+    setNewlyAddedId(id);
+    setPendingCustomer(null);
+    if (route && driverLocation) {
+      setLoading(true);
+      optimizeRoute([...customers, pendingCustomer], driverLocation, locale)
+        .then(result => setRoute(result))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [pendingCustomer, customers, route, driverLocation, locale]);
+
+  const handleCancel = useCallback(() => {
+    setPendingCustomer(null);
+  }, []);
+
+  // Auto-expand sheet when preview is shown
+  const prevPendingRef = useRef<Customer | null>(null);
+  useEffect(() => {
+    if (pendingCustomer && !prevPendingRef.current) {
+      const snaps = getSnapPoints();
+      snapTo(snaps.half);
+    }
+    prevPendingRef.current = pendingCustomer;
+  }, [pendingCustomer]);
 
   useEffect(() => {
     getDriverLocation()
@@ -273,6 +309,7 @@ export default function Home() {
           nextStopId={nextStopId}
           completedIds={completedIds}
           skippedIds={skippedIds}
+          pendingCustomer={pendingCustomer}
           followDriver={false}
           onManualPan={() => {
             const snaps = getSnapPoints();
@@ -451,12 +488,34 @@ export default function Home() {
               if (Math.abs(getCurrentTranslate() - snaps.collapsed) < 20) snapTo(snaps.half);
             }}>
             <div style={{ minHeight: 'calc(100% + 1px)' }}>
-            {hasRoute ? (
+            {pendingCustomer ? (
+              <div className="space-y-4 pt-2">
+                <div className="bg-gray-800/50 border border-yellow-500/30 rounded-2xl p-4">
+                  <p className="text-[10px] text-yellow-400 font-semibold uppercase tracking-wider mb-1.5">{pt.preview}</p>
+                  <p className="text-sm text-gray-100 leading-relaxed">{pendingCustomer.address}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={handleAccept}
+                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.97] shadow-lg shadow-blue-500/20">
+                    {pt.accept}
+                  </button>
+                  <button onClick={handleCancel}
+                    className="flex-1 py-3 bg-gray-800 text-gray-300 text-sm font-semibold rounded-xl border border-gray-700/50 hover:bg-gray-700 transition-all active:scale-[0.97]">
+                    {pt.cancel}
+                  </button>
+                </div>
+                {error && (
+                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                    <span>⚠️</span> {error}
+                  </div>
+                )}
+              </div>
+            ) : hasRoute ? (
               <>
                 {/* Add more stops while route exists */}
                 <div className="pt-2 border-t border-gray-700/30">
                   <p className="text-xs text-gray-500 font-medium mb-2">{rt.addStop}</p>
-                  <CustomerInput customers={customers} onChange={setCustomers} onFocus={() => setSheetTranslate(0)} />
+                  <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} onFocus={() => setSheetTranslate(0)} newlyAddedId={newlyAddedId} />
                 </div>
 
                 {/* Full route details */}
@@ -471,6 +530,7 @@ export default function Home() {
                     onUndoComplete={handleUndoComplete}
                     onSkip={handleSkip}
                     onUnskip={handleUnskip}
+                    newlyAddedId={newlyAddedId}
                   />
                   <button onClick={handleClear}
                     className="w-full mt-4 py-2.5 text-xs text-gray-500 hover:text-red-400 rounded-xl border border-dashed border-gray-700/50 hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 hover:bg-red-500/10">
@@ -480,7 +540,7 @@ export default function Home() {
               </>
             ) : (
               <>
-                <CustomerInput customers={customers} onChange={setCustomers} />
+                <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} newlyAddedId={newlyAddedId} />
 
                 {customers.length > 0 && (
                   <button onClick={optimize} disabled={loading || (!driverLocation && !startLocation)}

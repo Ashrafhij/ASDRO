@@ -16,6 +16,7 @@ interface RouteListProps {
   onUndoComplete: (customerId: string) => void;
   onSkip: (customerId: string) => void;
   onUnskip: (customerId: string) => void;
+  newlyAddedId?: string | null;
 }
 
 type NavApp = 'google' | 'waze' | 'apple';
@@ -44,7 +45,7 @@ function stopName(wp: Waypoint) {
 }
 
 export default function RouteList({
-  waypoints, totalDistance, totalDuration, completedIds, skippedIds, onMarkComplete, onUndoComplete, onSkip, onUnskip,
+  waypoints, totalDistance, totalDuration, completedIds, skippedIds, onMarkComplete, onUndoComplete, onSkip, onUnskip, newlyAddedId,
 }: RouteListProps) {
   const { t } = useI18n();
   const np = t.navPicker;
@@ -206,9 +207,11 @@ export default function RouteList({
               const isDone = completedIds.has(wp.customer.id);
               const isSkipped = skippedIds.has(wp.customer.id);
               const itemState = isDone ? 'done' : isSkipped ? 'skipped' : 'active';
+              const isNew = wp.customer.id === newlyAddedId;
 
               return (
                 <div key={wp.customer.id} className={`rounded-xl border transition-all ${
+                  isNew ? 'bg-emerald-500/20 border-emerald-400/40 animate-pulse' :
                   itemState === 'done' ? 'bg-emerald-900/20 border-emerald-700/30' :
                   itemState === 'skipped' ? 'bg-gray-800/30 border-gray-700/30' :
                   'bg-gray-800/50 border-gray-700/30 hover:border-gray-600/30'
