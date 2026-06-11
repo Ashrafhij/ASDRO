@@ -65,6 +65,7 @@ export default function Home() {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragState = useRef({ startY: 0, startTranslate: 0, dragging: false, moved: false });
   const mapRef = useRef<MapViewRef>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { detected: clipLocation, dismiss: dismissClip, showButton: showPasteButton } = useClipboardDetection();
   const hasRoute = route && route.waypoints.length > 0;
   const sortedWps = hasRoute ? [...route!.waypoints].sort((a, b) => a.order - b.order) : [];
@@ -382,7 +383,7 @@ export default function Home() {
         <div ref={sheetRef}
           className="fixed bottom-0 left-0 right-0 z-10 bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50"
           style={{
-            height: '85vh',
+            height: '85dvh',
             transform: `translateY(${sheetTranslate}px)`,
             transition: 'transform 0.3s ease-out',
           }}>
@@ -405,8 +406,30 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Summary + action buttons */}
-            {hasRoute ? (
+            {/* Summary / Confirmation / Action buttons */}
+            {pendingCustomer ? (
+              <div className="px-4 pb-3 space-y-3">
+                <div className="bg-gray-800/50 border border-yellow-500/30 rounded-2xl p-4">
+                  <p className="text-[10px] text-yellow-400 font-semibold uppercase tracking-wider mb-1.5">{pt.preview}</p>
+                  <p className="text-sm text-gray-100 leading-relaxed">{pendingCustomer.address}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={(e) => { e.stopPropagation(); handleCancel(); }}
+                    className="flex-1 py-3 bg-gray-700 text-white text-sm font-bold rounded-xl hover:bg-gray-600 transition-all active:scale-[0.97]">
+                    {pt.cancel}
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); handleAccept(); }}
+                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.97] shadow-lg shadow-blue-500/20">
+                    {pt.accept}
+                  </button>
+                </div>
+                {error && (
+                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                    <span>⚠️</span> {error}
+                  </div>
+                )}
+              </div>
+            ) : hasRoute ? (
               <div className="px-4 pb-3 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 text-sm">
@@ -471,7 +494,7 @@ export default function Home() {
               overscroll-none prevents scroll chaining / rubber-banding on iOS Safari.
               The inner min-h[calc(100%+1px)] guarantees the container is always
               1px scrollable so the browser never passes touch gestures to the body. */}
-          <div className="overflow-y-auto overscroll-none px-4 pb-6 space-y-4" style={{ height: 'calc(85vh - 132px)', touchAction: 'pan-y' }}
+           <div ref={scrollContainerRef} className="overflow-y-auto overscroll-none px-4 pb-32 space-y-4" style={{ height: 'calc(85dvh - 132px)', touchAction: 'pan-y' }}
             onPointerDown={(e) => {
               e.stopPropagation();
               const snaps = getSnapPoints();
@@ -488,34 +511,12 @@ export default function Home() {
               if (Math.abs(getCurrentTranslate() - snaps.collapsed) < 20) snapTo(snaps.half);
             }}>
             <div style={{ minHeight: 'calc(100% + 1px)' }}>
-            {pendingCustomer ? (
-              <div className="space-y-4 pt-2">
-                <div className="bg-gray-800/50 border border-yellow-500/30 rounded-2xl p-4">
-                  <p className="text-[10px] text-yellow-400 font-semibold uppercase tracking-wider mb-1.5">{pt.preview}</p>
-                  <p className="text-sm text-gray-100 leading-relaxed">{pendingCustomer.address}</p>
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={handleAccept}
-                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.97] shadow-lg shadow-blue-500/20">
-                    {pt.accept}
-                  </button>
-                  <button onClick={handleCancel}
-                    className="flex-1 py-3 bg-gray-800 text-gray-300 text-sm font-semibold rounded-xl border border-gray-700/50 hover:bg-gray-700 transition-all active:scale-[0.97]">
-                    {pt.cancel}
-                  </button>
-                </div>
-                {error && (
-                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
-                    <span>⚠️</span> {error}
-                  </div>
-                )}
-              </div>
-            ) : hasRoute ? (
+            {hasRoute ? (
               <>
                 {/* Add more stops while route exists */}
                 <div className="pt-2 border-t border-gray-700/30">
                   <p className="text-xs text-gray-500 font-medium mb-2">{rt.addStop}</p>
-                  <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} onFocus={() => setSheetTranslate(0)} newlyAddedId={newlyAddedId} />
+                  <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} onFocus={() => { setSheetTranslate(0); scrollContainerRef.current?.scrollTo(0, 0); }} newlyAddedId={newlyAddedId} />
                 </div>
 
                 {/* Full route details */}
@@ -540,7 +541,7 @@ export default function Home() {
               </>
             ) : (
               <>
-                <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} newlyAddedId={newlyAddedId} />
+                <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} onFocus={() => { setSheetTranslate(0); scrollContainerRef.current?.scrollTo(0, 0); }} newlyAddedId={newlyAddedId} />
 
                 {customers.length > 0 && (
                   <button onClick={optimize} disabled={loading || (!driverLocation && !startLocation)}

@@ -157,7 +157,7 @@ export default function CustomerInput({ customers, onChange, onAdd, onFocus: onF
           <input ref={inputRef} type="text" placeholder={ct.location} value={locationInput}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            onFocus={() => { onFocusProp?.(); if (suggestions.length > 0) setShowSuggestions(true); }}
+            onFocus={(e) => { onFocusProp?.(); if (suggestions.length > 0) setShowSuggestions(true); setTimeout(() => { e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }}
             className="w-full px-3.5 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none" />
           {showSuggestions && suggestions.length > 0 && (
             <div ref={listRef}
