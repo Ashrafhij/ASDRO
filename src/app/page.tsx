@@ -456,7 +456,7 @@ export default function Home() {
                 </div>
                 {/* Reoptimize button */}
                 <div className="flex gap-2">
-                  <button onClick={optimize} disabled={loading}
+                  <button onClick={optimize} disabled={loading || !isOnline}
                     className="flex-1 py-3 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] border border-gray-600/50 flex items-center justify-center gap-2 disabled:opacity-40">
                     {loading ? (
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -553,7 +553,7 @@ export default function Home() {
                 <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} onFocus={() => { setSheetTranslate(0); scrollContainerRef.current?.scrollTo(0, 0); }} disabled={!isOnline} newlyAddedId={newlyAddedId} />
 
                 {customers.length > 0 && (
-                  <button onClick={optimize} disabled={loading || (!driverLocation && !startLocation)}
+                  <button onClick={optimize} disabled={loading || !isOnline || (!driverLocation && !startLocation)}
                     className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2.5">
                     {loading ? (
                       <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {pt.optimizing}</span>
