@@ -1,4 +1,5 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import ClearAnalyticsButton from '@/components/ClearAnalyticsButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,11 +124,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold">App Activity</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          See how many people are using ASDRO and what devices they use
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold">App Activity</h1>
+          <p className="text-sm text-gray-400 mt-1">
+            See how many people are using ASDRO and what devices they use
+          </p>
+        </div>
+        <ClearAnalyticsButton />
       </div>
 
       <OverviewCards totalDev={totalDev} totalVisit={totalVisit} recentVisit={recentVisit} todayVisit={todayVisit} />

@@ -80,3 +80,15 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: 'Invalid request' }, { status: 400 });
   }
 }
+
+export async function DELETE() {
+  try {
+    const db = await getDb();
+    if (!db) return Response.json({ ok: false, error: 'No database' }, { status: 500 });
+    await db.prepare('DELETE FROM visits').run();
+    await db.prepare('DELETE FROM events').run();
+    return Response.json({ ok: true });
+  } catch {
+    return Response.json({ ok: false, error: 'Failed to clear' }, { status: 500 });
+  }
+}
