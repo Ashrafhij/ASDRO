@@ -13,6 +13,7 @@ import RouteList from '@/components/RouteList';
 import ClipboardBanner from '@/components/ClipboardBanner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import type { MapViewRef } from '@/components/MapView';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
@@ -66,6 +67,7 @@ export default function Home() {
   const dragState = useRef({ startY: 0, startTranslate: 0, dragging: false, moved: false });
   const mapRef = useRef<MapViewRef>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isOnline = useOnlineStatus();
   const { detected: clipLocation, dismiss: dismissClip, showButton: showPasteButton } = useClipboardDetection();
   const hasRoute = route && route.waypoints.length > 0;
   const sortedWps = hasRoute ? [...route!.waypoints].sort((a, b) => a.order - b.order) : [];
@@ -379,6 +381,13 @@ export default function Home() {
         </div>
       )}
 
+      {/* ===== Offline Banner ===== */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-30 bg-yellow-600/90 backdrop-blur-sm px-4 py-2.5 text-center text-sm font-semibold text-yellow-50 shadow-lg flex items-center justify-center gap-2">
+          <span>⚠️</span> {t.detection.offlineMode}
+        </div>
+      )}
+
       {/* ===== Draggable Bottom Sheet ===== */}
         <div ref={sheetRef}
           className="fixed bottom-0 left-0 right-0 z-10 bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50"
@@ -469,7 +478,7 @@ export default function Home() {
                   <span className="text-sm text-gray-300 font-semibold">{rt.addStop}</span>
                 </div>
                 {/* Paste button */}
-                {showPasteButton && (
+                {isOnline && showPasteButton && (
                   <button onClick={handleManualPaste} disabled={pasting}
                     className="w-full py-2.5 bg-gray-800/50 hover:bg-gray-800 text-gray-300 text-xs font-semibold rounded-xl border border-gray-700/30 hover:border-gray-600/50 transition-all active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-40">
                     {pasting ? (
@@ -516,7 +525,7 @@ export default function Home() {
                 {/* Add more stops while route exists */}
                 <div className="pt-2 border-t border-gray-700/30">
                   <p className="text-xs text-gray-500 font-medium mb-2">{rt.addStop}</p>
-                  <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} onFocus={() => { setSheetTranslate(0); scrollContainerRef.current?.scrollTo(0, 0); }} newlyAddedId={newlyAddedId} />
+                  <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} onFocus={() => { setSheetTranslate(0); scrollContainerRef.current?.scrollTo(0, 0); }} disabled={!isOnline} newlyAddedId={newlyAddedId} />
                 </div>
 
                 {/* Full route details */}
@@ -541,7 +550,7 @@ export default function Home() {
               </>
             ) : (
               <>
-                <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} onFocus={() => { setSheetTranslate(0); scrollContainerRef.current?.scrollTo(0, 0); }} newlyAddedId={newlyAddedId} />
+                <CustomerInput customers={customers} onChange={setCustomers} onAdd={handlePendingAdd} onFocus={() => { setSheetTranslate(0); scrollContainerRef.current?.scrollTo(0, 0); }} disabled={!isOnline} newlyAddedId={newlyAddedId} />
 
                 {customers.length > 0 && (
                   <button onClick={optimize} disabled={loading || (!driverLocation && !startLocation)}

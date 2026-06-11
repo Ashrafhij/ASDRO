@@ -17,9 +17,10 @@ interface CustomerInputProps {
   onAdd?: (customer: Customer) => void;
   onFocus?: () => void;
   newlyAddedId?: string | null;
+  disabled?: boolean;
 }
 
-export default function CustomerInput({ customers, onChange, onAdd, onFocus: onFocusProp, newlyAddedId }: CustomerInputProps) {
+export default function CustomerInput({ customers, onChange, onAdd, onFocus: onFocusProp, newlyAddedId, disabled }: CustomerInputProps) {
   const { t, locale } = useI18n();
   const ct = t.customerInput;
   const [locationInput, setLocationInput] = useState('');
@@ -154,11 +155,12 @@ export default function CustomerInput({ customers, onChange, onAdd, onFocus: onF
 
       <div className="relative flex gap-2">
         <div className="relative flex-1">
-          <input ref={inputRef} type="text" placeholder={ct.location} value={locationInput}
+          <input ref={inputRef} type="text" placeholder={disabled ? 'Offline' : ct.location} value={locationInput}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            disabled={disabled}
             onFocus={(e) => { onFocusProp?.(); if (suggestions.length > 0) setShowSuggestions(true); setTimeout(() => { e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }}
-            className="w-full px-3.5 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none" />
+            className="w-full px-3.5 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none disabled:opacity-40 disabled:cursor-not-allowed" />
           {showSuggestions && suggestions.length > 0 && (
             <div ref={listRef}
               className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-600/50 rounded-xl shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto">
@@ -174,7 +176,7 @@ export default function CustomerInput({ customers, onChange, onAdd, onFocus: onF
             </div>
           )}
         </div>
-        <button onClick={addLocation} disabled={parsing}
+        <button onClick={addLocation} disabled={disabled || parsing}
           className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 min-w-[80px]">
           {parsing ? (
             <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

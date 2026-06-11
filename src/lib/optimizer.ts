@@ -63,6 +63,7 @@ function formatInstruction(step: { maneuver: { type: string; modifier?: string }
 }
 
 async function getOSRMRoute(start: Location, end: Location, locale?: string, retries = 2): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string } | null> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
   const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true`;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
