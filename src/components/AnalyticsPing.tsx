@@ -1,28 +1,21 @@
 'use client';
 
 import { useEffect } from 'react';
-
-const DEVICE_KEY = 'asdro-device-id';
-
-function getDeviceId(): string {
-  let id = localStorage.getItem(DEVICE_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(DEVICE_KEY, id);
-  }
-  return id;
-}
+import { usePathname } from 'next/navigation';
+import { collectDeviceInfo } from '@/lib/analytics';
 
 export default function AnalyticsPing() {
+  const pathname = usePathname();
+
   useEffect(() => {
-    const deviceId = getDeviceId();
+    const info = collectDeviceInfo(pathname);
     fetch('/api/ping', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId }),
+      body: JSON.stringify(info),
       keepalive: true,
     }).catch(() => {});
-  }, []);
+  }, [pathname]);
 
   return null;
 }

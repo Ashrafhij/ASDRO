@@ -14,6 +14,7 @@ import ClipboardBanner from '@/components/ClipboardBanner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import type { MapViewRef } from '@/components/MapView';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { trackEventFireAndForget } from '@/lib/analytics';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
@@ -101,6 +102,7 @@ export default function Home() {
     setPendingCustomer(newCustomer);
     setShareLocation(null);
     dismissClip();
+    trackEventFireAndForget('detected_add');
   }, [dismissClip]);
 
   const [pasting, setPasting] = useState(false);
@@ -118,6 +120,7 @@ export default function Home() {
       };
       setPendingCustomer(newCustomer);
       setPasting(false);
+      trackEventFireAndForget('manual_paste');
     } catch {
       setError('Could not read clipboard. ASDRO needs HTTPS or a user gesture.');
       setPasting(false);
@@ -134,6 +137,7 @@ export default function Home() {
     setCustomers(prev => [...prev, pendingCustomer!]);
     setNewlyAddedId(id);
     setPendingCustomer(null);
+    trackEventFireAndForget('add_stop');
     if (route && driverLocation) {
       setLoading(true);
       optimizeRoute([...customers, pendingCustomer], driverLocation, locale)
@@ -175,6 +179,7 @@ export default function Home() {
     try {
       const result = await optimizeRoute(customers, driverLocation || startLocation!, locale);
       setRoute(result); setSheetTranslate(0);
+      trackEventFireAndForget('optimize_route');
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
   }, [customers, startLocation, driverLocation, locale, pt]);
@@ -197,6 +202,7 @@ export default function Home() {
   const handleMarkComplete = useCallback(async (customerId: string) => {
     const newCompleted = new Set(completedIds); newCompleted.add(customerId);
     setCompletedIds(newCompleted);
+    trackEventFireAndForget('mark_complete');
     const remainingIds = new Set(customers.map(c => c.id));
     completedIds.forEach(id => remainingIds.delete(id));
     newCompleted.forEach(id => remainingIds.delete(id));
@@ -211,6 +217,7 @@ export default function Home() {
   const handleSkip = useCallback(async (customerId: string) => {
     const newSkipped = new Set(skippedIds); newSkipped.add(customerId);
     setSkippedIds(newSkipped);
+    trackEventFireAndForget('skip_stop');
     const remainingIds = new Set(customers.map(c => c.id));
     completedIds.forEach(id => remainingIds.delete(id));
     skippedIds.forEach(id => remainingIds.delete(id));
@@ -249,6 +256,7 @@ export default function Home() {
     setCustomers([]); setRoute(null); setCompletedIds(new Set());
     setSkippedIds(new Set()); setError('');
     setMenuOpen(false);
+    trackEventFireAndForget('clear_all');
   };
 
   // Draggable bottom sheet handlers
@@ -295,7 +303,7 @@ export default function Home() {
   const handleLocate = () => {
     setLocating(true); setMenuOpen(false);
     getDriverLocation()
-      .then((loc) => { setDriverLocation(loc); setStartLocation(loc); setLocating(false); })
+      .then((loc) => { setDriverLocation(loc); setStartLocation(loc); setLocating(false); trackEventFireAndForget('locate_me'); })
       .catch(() => { setError(pt.gpsError); setLocating(false); });
   };
 

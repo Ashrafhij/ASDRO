@@ -1,10 +1,18 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-const TABLE = `CREATE TABLE IF NOT EXISTS visits (
+const VISITS_TABLE = `CREATE TABLE IF NOT EXISTS visits (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id TEXT NOT NULL,
   visited_at TEXT NOT NULL,
-  page TEXT DEFAULT '/'
+  page TEXT DEFAULT '/',
+  user_agent TEXT,
+  browser TEXT,
+  os TEXT,
+  screen_width INTEGER,
+  screen_height INTEGER,
+  is_pwa INTEGER DEFAULT 0,
+  language TEXT,
+  timezone TEXT
 )`;
 
 async function getDb(): Promise<D1Database | null> {
@@ -16,21 +24,55 @@ async function getDb(): Promise<D1Database | null> {
   }
 }
 
+async function ensureTable(db: D1Database) {
+  try {
+    await db.prepare(VISITS_TABLE).run();
+  } catch {
+    // table already exists
+  }
+  // add columns if missing (schema migration)
+  for (const col of ['user_agent', 'browser', 'os', 'screen_width', 'screen_height', 'is_pwa', 'language', 'timezone']) {
+    try {
+      await db.prepare(`ALTER TABLE visits ADD COLUMN ${col} TEXT`).run();
+    } catch {
+      // column already exists
+    }
+  }
+  // fix is_pwa type if needed (it's INTEGER, not TEXT)
+  try {
+    await db.prepare(`ALTER TABLE visits ADD COLUMN is_pwa INTEGER DEFAULT 0`).run();
+  } catch {
+    // already exists
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const { deviceId } = await request.json();
+    const body = await request.json();
+    const { deviceId, page, userAgent, browser, os, screenWidth, screenHeight, isPwa, language, timezone } = body;
+
     if (!deviceId || typeof deviceId !== 'string') {
       return Response.json({ ok: false, error: 'Missing deviceId' }, { status: 400 });
     }
 
     const db = await getDb();
     if (db) {
-      try {
-        await db.prepare('INSERT INTO visits (device_id, visited_at) VALUES (?, datetime(\'now\'))').bind(deviceId).run();
-      } catch {
-        await db.prepare(TABLE).run();
-        await db.prepare('INSERT INTO visits (device_id, visited_at) VALUES (?, datetime(\'now\'))').bind(deviceId).run();
-      }
+      await ensureTable(db);
+      await db.prepare(
+        `INSERT INTO visits (device_id, visited_at, page, user_agent, browser, os, screen_width, screen_height, is_pwa, language, timezone)
+         VALUES (?, datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        deviceId,
+        page || '/',
+        userAgent || null,
+        browser || null,
+        os || null,
+        screenWidth ?? null,
+        screenHeight ?? null,
+        isPwa ? 1 : 0,
+        language || null,
+        timezone || null,
+      ).run();
     }
 
     return Response.json({ ok: true });
