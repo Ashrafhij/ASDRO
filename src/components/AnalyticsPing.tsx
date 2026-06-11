@@ -8,6 +8,7 @@ export default function AnalyticsPing() {
   const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname === '/dashboard' || pathname.startsWith('/api/')) return;
     const info = collectDeviceInfo(pathname);
     fetch('/api/ping', {
       method: 'POST',
