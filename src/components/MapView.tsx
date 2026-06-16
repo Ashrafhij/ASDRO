@@ -53,11 +53,12 @@ function driverIconHtml(heading?: number) {
 
 const startIconHtml = `<div style="width:28px;height:28px;border-radius:50%;background:#f59e0b;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#fff">S</div>`;
 
-function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, glow: string) {
+function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, glow: string, label?: string) {
   const ring = pulse ? `<div style="position:absolute;inset:-6px;border-radius:50%;background:${glow};animation:pulse-ring 2s infinite;z-index:1"></div>` : '';
   const shadow = pulse ? `0 3px 14px ${glow}` : '0 2px 6px rgba(0,0,0,0.3)';
   const fontSize = size >= 32 ? 13 : size >= 28 ? 11 : 10;
-  return `<div style="position:relative;width:${size}px;height:${size}px">${ring}<div style="position:absolute;inset:0;border-radius:50%;background:${bg};border:3px solid #fff;box-shadow:${shadow};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:bold;color:#fff;z-index:2">${order}</div></div>`;
+  const lbl = label ? `<div style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:4px;background:rgba(17,24,39,0.92);color:#e5e7eb;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;border:1px solid rgba(75,85,99,0.5);box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;z-index:10">${label}</div>` : '';
+  return `<div style="position:relative;width:${size}px;height:${size}px">${lbl}${ring}<div style="position:absolute;inset:0;border-radius:50%;background:${bg};border:3px solid #fff;box-shadow:${shadow};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:bold;color:#fff;z-index:2">${order}</div></div>`;
 }
 
 export default forwardRef<MapViewRef, MapViewProps>(function MapView({
@@ -151,25 +152,24 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         const isNext = wp.customer.id === nextStopId;
         const isArrived = arrivedStopId === wp.customer.id;
 
+        const stopLabel = (!isDone && !isSkipped) ? (wp.customer.name || wp.customer.address || '') : undefined;
+
         let icon: L.DivIcon;
         if (isDone) {
           icon = L.divIcon({ html: stopIconHtml(0, 26, '#6b7280', false, ''), className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
         } else if (isSkipped) {
           icon = L.divIcon({ html: stopIconHtml(0, 26, '#4b5563', false, ''), className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
         } else if (isArrived) {
-          icon = L.divIcon({ html: stopIconHtml(wp.order, 42, 'linear-gradient(135deg,#10b981,#047857)', true, 'rgba(16,185,129,0.4)'), className: '', iconSize: [42, 42], iconAnchor: [21, 21] });
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 42, 'linear-gradient(135deg,#10b981,#047857)', true, 'rgba(16,185,129,0.4)', stopLabel), className: '', iconSize: [42, 42], iconAnchor: [21, 21] });
         } else if (isNext) {
-          icon = L.divIcon({ html: stopIconHtml(wp.order, 38, 'linear-gradient(135deg,#f59e0b,#d97706)', true, 'rgba(245,158,11,0.3)'), className: '', iconSize: [38, 38], iconAnchor: [19, 19] });
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 38, 'linear-gradient(135deg,#f59e0b,#d97706)', true, 'rgba(245,158,11,0.3)', stopLabel), className: '', iconSize: [38, 38], iconAnchor: [19, 19] });
         } else {
-          icon = L.divIcon({ html: stopIconHtml(wp.order, 30, 'linear-gradient(135deg,#10b981,#059669)', false, ''), className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 30, 'linear-gradient(135deg,#10b981,#059669)', false, '', stopLabel), className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
         }
 
-        const label = wp.customer.name || wp.customer.address || `Stop ${wp.order}`;
-        const marker = L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isArrived ? 600 : isNext ? 500 : 0 });
-        if (!isDone && !isSkipped) {
-          marker.bindTooltip(label, { direction: 'top', offset: [0, -12], className: 'map-stop-label' });
-        }
-        marker.addTo(group).bindPopup(`<b>${mt.stop} ${wp.order}: ${wp.customer.address}</b><br/>${mt.estArrival}: ${wp.estimatedArrival}`);
+        L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isArrived ? 600 : isNext ? 500 : 0 })
+          .addTo(group)
+          .bindPopup(`<b>${mt.stop} ${wp.order}: ${wp.customer.address}</b><br/>${mt.estArrival}: ${wp.estimatedArrival}`);
         bounds.push([wp.customer.location.lat, wp.customer.location.lng]);
 
         if (isDone || isSkipped) return;
