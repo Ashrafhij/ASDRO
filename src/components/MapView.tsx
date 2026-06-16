@@ -26,28 +26,22 @@ interface MapViewProps {
 }
 
 function addRoutePolyline(group: L.LayerGroup, coords: [number, number][]) {
-  L.polyline(coords, { color: '#4338ca', weight: 14, opacity: 0.2, lineCap: 'round', lineJoin: 'round' }).addTo(group);
-  L.polyline(coords, { color: '#6366f1', weight: 8, opacity: 0.5, lineCap: 'round', lineJoin: 'round' }).addTo(group);
-  L.polyline(coords, { color: '#a5b4fc', weight: 4, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(group);
+  L.polyline(coords, { color: '#1a73e8', weight: 7, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(group);
 }
 
 function driverIconHtml(heading?: number) {
-  const rotation = heading !== undefined ? `rotate(${heading}deg)` : '';
+  const cone = heading !== undefined
+    ? `<div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%) rotate(${heading}deg);transform-origin:bottom center;">
+        <svg width="14" height="16" viewBox="0 0 14 16">
+          <path d="M7 0 L14 16 L7 11 L0 16 Z" fill="rgba(26,115,232,0.35)" />
+        </svg>
+      </div>`
+    : '';
   return `
-    <div style="position:relative;width:44px;height:44px;transform:${rotation};transform-origin:center center;transition:transform 0.15s ease-out">
-      <svg width="44" height="44" viewBox="0 0 44 44" style="filter:drop-shadow(0 2px 12px rgba(45,212,191,0.5))">
-        <defs>
-          <linearGradient id="diamGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#2dd4bf" />
-            <stop offset="100%" stop-color="#0d9488" />
-          </linearGradient>
-        </defs>
-        <path d="M22 2 C22 2 44 22 44 22 C44 22 22 42 22 42 C22 42 0 22 0 22 C0 22 22 2 22 2 Z"
-              fill="url(#diamGrad)" stroke="#134e4a" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M22 8 C22 8 36 22 36 22 C36 22 22 36 22 36 C22 36 8 22 8 22 C8 22 22 8 22 8 Z"
-              fill="#5eead4" opacity="0.25"/>
-        <circle cx="22" cy="22" r="5" fill="#ccfbf1" opacity="0.9"/>
-      </svg>
+    <div style="position:relative;width:40px;height:40px">
+      ${cone}
+      <div style="position:absolute;inset:0;border-radius:50%;background:rgba(26,115,232,0.15);animation:pulse-ring 2s infinite"></div>
+      <div style="position:absolute;inset:2px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 2px 8px rgba(26,115,232,0.4);z-index:1"></div>
     </div>`;
 }
 
@@ -85,7 +79,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, { zoomControl: true, zoom: 13 }).setView([32.0, 34.8], 10);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
       maxZoom: 19,
     }).addTo(map);
@@ -155,15 +149,15 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
 
         let icon: L.DivIcon;
         if (isDone) {
-          icon = L.divIcon({ html: stopIconHtml(0, 24, '#374151', false, ''), className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
+          icon = L.divIcon({ html: stopIconHtml(0, 24, '#9ca3af', false, ''), className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
         } else if (isSkipped) {
-          icon = L.divIcon({ html: stopIconHtml(0, 24, '#1f2937', false, ''), className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
+          icon = L.divIcon({ html: stopIconHtml(0, 24, '#6b7280', false, ''), className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
         } else if (isArrived) {
-          icon = L.divIcon({ html: stopIconHtml(wp.order, 40, 'linear-gradient(135deg,#34d399,#059669)', true, 'rgba(52,211,153,0.35)'), className: '', iconSize: [40, 40], iconAnchor: [20, 20] });
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 40, '#1a73e8', true, 'rgba(26,115,232,0.3)'), className: '', iconSize: [40, 40], iconAnchor: [20, 20] });
         } else if (isNext) {
-          icon = L.divIcon({ html: stopIconHtml(wp.order, 34, 'linear-gradient(135deg,#fbbf24,#d97706)', true, 'rgba(251,191,36,0.3)'), className: '', iconSize: [34, 34], iconAnchor: [17, 17] });
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 34, '#1a73e8', true, 'rgba(26,115,232,0.25)'), className: '', iconSize: [34, 34], iconAnchor: [17, 17] });
         } else {
-          icon = L.divIcon({ html: stopIconHtml(wp.order, 28, 'linear-gradient(135deg,#6366f1,#4f46e5)', false, ''), className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 28, '#1a73e8', false, ''), className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
         }
 
         const marker = L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isArrived ? 600 : isNext ? 500 : 0 })
@@ -188,7 +182,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       // Pre-route customer markers
       customers.forEach((c, i) => {
         const icon = L.divIcon({
-          html: stopIconHtml(i + 1, 28, 'linear-gradient(135deg,#6366f1,#4f46e5)', false, ''),
+          html: stopIconHtml(i + 1, 28, '#1a73e8', false, ''),
           className: '', iconSize: [28, 28], iconAnchor: [14, 14],
         });
         L.marker([c.location.lat, c.location.lng], { icon })
