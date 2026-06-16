@@ -164,9 +164,12 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
           icon = L.divIcon({ html: stopIconHtml(wp.order, 30, 'linear-gradient(135deg,#10b981,#059669)', false, ''), className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
         }
 
-        L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isArrived ? 600 : isNext ? 500 : 0 })
-          .addTo(group)
-          .bindPopup(`<b>${mt.stop} ${wp.order}: ${wp.customer.address}</b><br/>${mt.estArrival}: ${wp.estimatedArrival}`);
+        const label = wp.customer.name || wp.customer.address || `Stop ${wp.order}`;
+        const marker = L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isArrived ? 600 : isNext ? 500 : 0 });
+        if (!isDone && !isSkipped) {
+          marker.bindTooltip(label, { direction: 'top', offset: [0, -12], className: 'map-stop-label' });
+        }
+        marker.addTo(group).bindPopup(`<b>${mt.stop} ${wp.order}: ${wp.customer.address}</b><br/>${mt.estArrival}: ${wp.estimatedArrival}`);
         bounds.push([wp.customer.location.lat, wp.customer.location.lng]);
 
         if (isDone || isSkipped) return;
