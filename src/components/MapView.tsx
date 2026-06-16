@@ -272,6 +272,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       } else {
         mapRef.current.setView([driverLocation.lat, driverLocation.lng], 15, { animate: true });
       }
+      manualPanRef.current = false;
     }
   }, [driverLocation, waypoints, customers, startLocation]);
 
