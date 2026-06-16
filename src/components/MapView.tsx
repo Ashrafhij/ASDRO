@@ -169,14 +169,33 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
 
         if (isDone || isSkipped) return;
 
+        const isCurrentLeg = wp.customer.id === nextStopId;
+        const prevWp = i === 0 ? null : sorted[i - 1];
+        const prevIsBehind = prevWp ? (cs.has(prevWp.customer.id) || sk.has(prevWp.customer.id)) : true;
+        if (prevIsBehind && !isCurrentLeg) return;
+
+        let legCoords: [number, number][];
         if (wp.legGeometry && wp.legGeometry.length > 0) {
-          addRoutePolyline(group, wp.legGeometry as [number, number][]);
+          legCoords = wp.legGeometry as [number, number][];
         } else {
-          const prev = i === 0 ? (driverLocation || startLocation) : sorted[i - 1].customer.location;
-          if (prev && !cs.has(sorted[i - 1]?.customer.id) && !sk.has(sorted[i - 1]?.customer.id)) {
-            addRoutePolyline(group, [[prev.lat, prev.lng], [wp.customer.location.lat, wp.customer.location.lng]]);
-          }
+          const from = prevWp ? prevWp.customer.location : (driverLocation || startLocation);
+          if (!from) return;
+          legCoords = [[from.lat, from.lng], [wp.customer.location.lat, wp.customer.location.lng]];
         }
+
+        if (isCurrentLeg && driverLocation && legCoords.length > 1) {
+          let closestIdx = 0;
+          let minDist = Infinity;
+          for (let j = 0; j < legCoords.length; j++) {
+            const dLat = legCoords[j][0] - driverLocation.lat;
+            const dLng = legCoords[j][1] - driverLocation.lng;
+            const d = dLat * dLat + dLng * dLng;
+            if (d < minDist) { minDist = d; closestIdx = j; }
+          }
+          legCoords = legCoords.slice(closestIdx);
+        }
+
+        addRoutePolyline(group, legCoords);
       });
     } else if (customers.length > 0) {
       // Pre-route customer markers
