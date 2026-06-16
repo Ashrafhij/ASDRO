@@ -32,21 +32,22 @@ body {
 
 html { scroll-behavior: smooth; }
 
-/* Map stop tooltips — dark purple speech bubble with white text */
+/* Map stop tooltips — dark glass with indigo accent */
 .stop-tooltip {
-  background: rgba(88, 28, 135, 0.92) !important;
-  color: #f3e8ff !important;
-  border: 1px solid rgba(139, 92, 246, 0.5) !important;
-  border-radius: 8px !important;
+  background: rgba(15, 23, 42, 0.92) !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(99, 102, 241, 0.4) !important;
+  border-radius: 10px !important;
   font-size: 12px !important;
-  font-weight: 600 !important;
-  padding: 4px 10px !important;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.35) !important;
+  font-weight: 500 !important;
+  padding: 5px 12px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+  backdrop-filter: blur(8px) !important;
   white-space: nowrap !important;
-  max-width: 160px !important;
+  max-width: 180px !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
 .stop-tooltip::before {
-  border-top-color: rgba(88, 28, 135, 0.92) !important;
+  border-top-color: rgba(15, 23, 42, 0.92) !important;
 }
