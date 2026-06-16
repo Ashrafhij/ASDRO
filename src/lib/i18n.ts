@@ -98,6 +98,8 @@ https://maps.app.goo.gl/abc123`,
     arrived: "You've arrived",
     arrivedAt: 'Arrived at',
     markDone: 'Mark done',
+    nextTurn: 'Next turn',
+    remaining: 'remaining',
   },
 };
 
@@ -191,6 +193,8 @@ https://maps.app.goo.gl/abc123`,
     arrived: 'הגעת ליעד',
     arrivedAt: 'הגעת לתחנה',
     markDone: 'סמן כבוצע',
+    nextTurn: 'הפנייה הבאה',
+    remaining: 'נותר',
   },
 };
 
@@ -284,6 +288,8 @@ https://maps.app.goo.gl/abc123`,
     arrived: 'لقد وصلت',
     arrivedAt: 'وصلت إلى',
     markDone: 'تحديث كمكتمل',
+    nextTurn: 'المنعطف التالي',
+    remaining: 'المتبقي',
   },
 };
 

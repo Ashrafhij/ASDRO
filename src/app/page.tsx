@@ -47,6 +47,8 @@ export default function Home() {
   const [arrivedStop, setArrivedStop] = useState<Waypoint | null>(null);
   const [pendingStopName, setPendingStopName] = useState('');
   useEffect(() => { setPendingStopName(''); }, [pendingCustomer]);
+  const [followDriver, setFollowDriver] = useState(true);
+  const [nextStopDistance, setNextStopDistance] = useState<number | null>(null);
   const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
   const getSnapPoints = () => {
     const h = typeof window !== 'undefined' ? window.innerHeight : 1000;
@@ -220,6 +222,19 @@ export default function Home() {
     }
   }, [driverLocation, arrivedStop]);
 
+  // Compute haversine distance to next active stop
+  useEffect(() => {
+    if (!driverLocation || !route) { setNextStopDistance(null); return; }
+    const sorted = [...route.waypoints].sort((a, b) => a.order - b.order);
+    const nextStop = sorted.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
+    if (!nextStop) { setNextStopDistance(null); return; }
+    const R = 6371000;
+    const dLat = (nextStop.customer.location.lat - driverLocation.lat) * Math.PI / 180;
+    const dLng = (nextStop.customer.location.lng - driverLocation.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(driverLocation.lat * Math.PI / 180) * Math.cos(nextStop.customer.location.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    setNextStopDistance(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  }, [driverLocation, route, completedIds, skippedIds]);
+
   const handleMarkComplete = useCallback(async (customerId: string) => {
     const newCompleted = new Set(completedIds); newCompleted.add(customerId);
     setCompletedIds(newCompleted);
@@ -358,13 +373,39 @@ export default function Home() {
           completedIds={completedIds}
           skippedIds={skippedIds}
           pendingCustomer={pendingCustomer}
-          followDriver={false}
+          followDriver={followDriver && !!hasRoute}
           onManualPan={() => {
             const snaps = getSnapPoints();
             if (Math.abs(getCurrentTranslate() - snaps.collapsed) > 20) snapTo(snaps.collapsed);
           }}
           height="100%"
         />
+        {/* Next-turn floating banner */}
+        {hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
+          <div className="absolute bottom-0 left-0 right-0 z-[5] pointer-events-none p-3 pb-[max(env(safe-area-inset-bottom),8px)]">
+            <div className="pointer-events-auto bg-gray-900/90 backdrop-blur-xl border border-blue-500/25 rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
+                  <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-blue-300 font-semibold uppercase tracking-wider">{pt.nextTurn}</p>
+                <p className="text-sm text-gray-100 font-medium truncate">{activeWaypoint.nextInstruction}</p>
+              </div>
+              {nextStopDistance !== null && (
+                <div className="text-right shrink-0">
+                  <p className="text-[10px] text-gray-400">{pt.remaining}</p>
+                  <p className="text-sm text-gray-100 font-semibold tabular-nums">
+                    {nextStopDistance >= 1000
+                      ? `${(nextStopDistance / 1000).toFixed(1)} km`
+                      : `${Math.round(nextStopDistance)} m`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ===== Corner menu button (top-left) ===== */}
@@ -402,10 +443,10 @@ export default function Home() {
         )}
       </div>
 
-      {/* ===== Locate button (top-right) ===== */}
-      <div className={`absolute right-4 z-40 transition-all ${isOnline ? 'top-4' : 'top-14'}`}>
+      {/* ===== Locate button + Follow toggle (top-right) ===== */}
+      <div className={`absolute right-4 z-40 flex gap-2 transition-all ${isOnline ? 'top-4' : 'top-14'}`}>
         <button onClick={() => {
-            if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); }
+            if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); setFollowDriver(true); }
             else handleLocate();
           }}
             className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
@@ -413,6 +454,14 @@ export default function Home() {
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
             </svg>
           </button>
+        {hasRoute && (
+          <button onClick={() => setFollowDriver(v => !v)}
+            className={`w-11 h-11 rounded-full shadow-2xl border flex items-center justify-center transition-all active:scale-90 ${followDriver ? 'bg-blue-600/80 border-blue-500/60' : 'bg-gray-900/80 border-gray-700/50 hover:bg-gray-800/90'}`}>
+            <svg viewBox="0 0 24 24" className={`w-5 h-5 ${followDriver ? 'fill-white' : 'fill-gray-400'}`}>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+            </svg>
+          </button>
+        )}
         </div>
 
       {/* ===== Clipboard detection banner ===== */}
