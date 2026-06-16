@@ -165,7 +165,11 @@ export default function RouteList({
                   {currentStop.order}
                 </div>
                 <div className="flex-1 min-w-0 pt-1">
-                  <p className="text-sm text-gray-400 truncate">{currentStop.customer.address}</p>
+                  {currentStop.customer.name ? (
+                    <><p className="text-sm text-gray-100 font-semibold truncate">{currentStop.customer.name}</p><p className="text-xs text-gray-500 truncate">{currentStop.customer.address}</p></>
+                  ) : (
+                    <p className="text-sm text-gray-400 truncate">{currentStop.customer.address}</p>
+                  )}
                 </div>
               </div>
 

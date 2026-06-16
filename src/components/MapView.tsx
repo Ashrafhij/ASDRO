@@ -19,6 +19,7 @@ interface MapViewProps {
   followDriver?: boolean;
   onManualPan?: () => void;
   nextStopId?: string | null;
+  arrivedStopId?: string | null;
   completedIds?: Set<string>;
   skippedIds?: Set<string>;
   pendingCustomer?: Customer | null;
@@ -61,7 +62,7 @@ function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, g
 
 export default forwardRef<MapViewRef, MapViewProps>(function MapView({
   waypoints, customers = [], driverLocation, startLocation, height = '100%', followDriver, onManualPan,
-  nextStopId, completedIds, skippedIds, pendingCustomer,
+  nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer,
 }, ref) {
   const { t } = useI18n();
   const mt = t.map;
@@ -148,19 +149,22 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         const isDone = cs.has(wp.customer.id);
         const isSkipped = sk.has(wp.customer.id);
         const isNext = wp.customer.id === nextStopId;
+        const isArrived = arrivedStopId === wp.customer.id;
 
         let icon: L.DivIcon;
         if (isDone) {
           icon = L.divIcon({ html: stopIconHtml(0, 26, '#6b7280', false, ''), className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
         } else if (isSkipped) {
           icon = L.divIcon({ html: stopIconHtml(0, 26, '#4b5563', false, ''), className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
+        } else if (isArrived) {
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 42, 'linear-gradient(135deg,#10b981,#047857)', true, 'rgba(16,185,129,0.4)'), className: '', iconSize: [42, 42], iconAnchor: [21, 21] });
         } else if (isNext) {
           icon = L.divIcon({ html: stopIconHtml(wp.order, 38, 'linear-gradient(135deg,#f59e0b,#d97706)', true, 'rgba(245,158,11,0.3)'), className: '', iconSize: [38, 38], iconAnchor: [19, 19] });
         } else {
           icon = L.divIcon({ html: stopIconHtml(wp.order, 30, 'linear-gradient(135deg,#10b981,#059669)', false, ''), className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
         }
 
-        L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isNext ? 500 : 0 })
+        L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isArrived ? 600 : isNext ? 500 : 0 })
           .addTo(group)
           .bindPopup(`<b>${mt.stop} ${wp.order}: ${wp.customer.address}</b><br/>${mt.estArrival}: ${wp.estimatedArrival}`);
         bounds.push([wp.customer.location.lat, wp.customer.location.lng]);
@@ -197,7 +201,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     if (bounds.length > 0 && !followDriver && !manualPanRef.current) {
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
     }
-  }, [waypoints, customers, startLocation, mt, followDriver, nextStopId, completedIds, skippedIds, pendingCustomer]);
+  }, [waypoints, customers, startLocation, mt, followDriver, nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer]);
 
   // Reset manualPan when entering follow mode
   useEffect(() => {

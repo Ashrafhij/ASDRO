@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Customer, Location, OptimizedRoute } from '@/lib/types';
+import { Customer, Location, Waypoint, OptimizedRoute } from '@/lib/types';
 import { optimizeRoute } from '@/lib/optimizer';
 import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
@@ -44,6 +44,9 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingCustomer, setPendingCustomer] = useState<Customer | null>(null);
   const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
+  const [arrivedStop, setArrivedStop] = useState<Waypoint | null>(null);
+  const [pendingStopName, setPendingStopName] = useState('');
+  useEffect(() => { setPendingStopName(''); }, [pendingCustomer]);
   const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
   const getSnapPoints = () => {
     const h = typeof window !== 'undefined' ? window.innerHeight : 1000;
@@ -74,6 +77,7 @@ export default function Home() {
   const sortedWps = hasRoute ? [...route!.waypoints].sort((a, b) => a.order - b.order) : [];
   const activeWaypoint = sortedWps.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
   const nextStopId = activeWaypoint?.customer.id || null;
+  const arrivedStopId = arrivedStop?.customer.id || null;
 
   useEffect(() => { save('customers', customers); }, [customers]);
   useEffect(() => { save('route', route); }, [route]);
@@ -133,19 +137,20 @@ export default function Home() {
 
   const handleAccept = useCallback(() => {
     if (!pendingCustomer) return;
-    const id = pendingCustomer.id;
-    setCustomers(prev => [...prev, pendingCustomer!]);
+    const named = { ...pendingCustomer, name: pendingStopName || '' };
+    const id = named.id;
+    setCustomers(prev => [...prev, named]);
     setNewlyAddedId(id);
     setPendingCustomer(null);
     trackEventFireAndForget('add_stop');
     if (route && driverLocation) {
       setLoading(true);
-      optimizeRoute([...customers, pendingCustomer], driverLocation, locale)
+      optimizeRoute([...customers, named], driverLocation, locale)
         .then(result => setRoute(result))
         .catch(() => {})
         .finally(() => setLoading(false));
     }
-  }, [pendingCustomer, customers, route, driverLocation, locale]);
+  }, [pendingCustomer, pendingStopName, customers, route, driverLocation, locale]);
 
   const handleCancel = useCallback(() => {
     setPendingCustomer(null);
@@ -184,9 +189,9 @@ export default function Home() {
     finally { setLoading(false); }
   }, [customers, startLocation, driverLocation, locale, pt]);
 
-  // Proximity auto-complete
+  // Arrival detection — shows confirmation instead of auto-completing
   useEffect(() => {
-    if (!driverLocation || !route) return;
+    if (!driverLocation || !route || arrivedStop) return;
     const sorted = [...route.waypoints].sort((a, b) => a.order - b.order);
     const nextStop = sorted.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
     if (!nextStop) return;
@@ -195,9 +200,25 @@ export default function Home() {
     const dLng = (nextStop.customer.location.lng - driverLocation.lng) * Math.PI / 180;
     const a = Math.sin(dLat / 2) ** 2 + Math.cos(driverLocation.lat * Math.PI / 180) * Math.cos(nextStop.customer.location.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
     if (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) < 50) {
-      setCompletedIds(prev => { const n = new Set(prev); n.add(nextStop.customer.id); return n; });
+      setArrivedStop(nextStop);
+      const snaps = getSnapPoints();
+      snapTo(snaps.full);
+      trackEventFireAndForget('arrived_at_stop');
+      try { navigator.vibrate?.(200); } catch {}
     }
-  }, [driverLocation, route, completedIds, skippedIds]);
+  }, [driverLocation, route, completedIds, skippedIds, arrivedStop]);
+
+  // Auto-dismiss arrival when driver moves >100m away
+  useEffect(() => {
+    if (!arrivedStop || !driverLocation) return;
+    const R = 6371000;
+    const dLat = (arrivedStop.customer.location.lat - driverLocation.lat) * Math.PI / 180;
+    const dLng = (arrivedStop.customer.location.lng - driverLocation.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(driverLocation.lat * Math.PI / 180) * Math.cos(arrivedStop.customer.location.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    if (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) > 100) {
+      setArrivedStop(null);
+    }
+  }, [driverLocation, arrivedStop]);
 
   const handleMarkComplete = useCallback(async (customerId: string) => {
     const newCompleted = new Set(completedIds); newCompleted.add(customerId);
@@ -252,10 +273,25 @@ export default function Home() {
     try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { /* ok */ }
   }, [customers, completedIds, skippedIds, driverLocation, locale]);
 
+  const handleArrivedDone = useCallback(() => {
+    if (!arrivedStop) return;
+    const id = arrivedStop.customer.id;
+    setArrivedStop(null);
+    handleMarkComplete(id);
+  }, [arrivedStop, handleMarkComplete]);
+
+  const handleArrivedSkip = useCallback(() => {
+    if (!arrivedStop) return;
+    const id = arrivedStop.customer.id;
+    setArrivedStop(null);
+    handleSkip(id);
+  }, [arrivedStop, handleSkip]);
+
   const handleClear = () => {
     setCustomers([]); setRoute(null); setCompletedIds(new Set());
     setSkippedIds(new Set()); setError('');
     setMenuOpen(false);
+    setArrivedStop(null);
     trackEventFireAndForget('clear_all');
   };
 
@@ -318,6 +354,7 @@ export default function Home() {
           driverLocation={driverLocation}
           startLocation={!driverLocation ? startLocation : null}
           nextStopId={nextStopId}
+          arrivedStopId={arrivedStopId}
           completedIds={completedIds}
           skippedIds={skippedIds}
           pendingCustomer={pendingCustomer}
@@ -428,9 +465,15 @@ export default function Home() {
             {/* Summary / Confirmation / Action buttons */}
             {pendingCustomer ? (
               <div className="px-4 pb-3 space-y-3">
-                <div className="bg-gray-800/50 border border-yellow-500/30 rounded-2xl p-4">
-                  <p className="text-[10px] text-yellow-400 font-semibold uppercase tracking-wider mb-1.5">{pt.preview}</p>
+                <div className="bg-gray-800/50 border border-yellow-500/30 rounded-2xl p-4 space-y-3">
+                  <p className="text-[10px] text-yellow-400 font-semibold uppercase tracking-wider">{pt.preview}</p>
                   <p className="text-sm text-gray-100 leading-relaxed">{pendingCustomer.address}</p>
+                  <input type="text"
+                    placeholder="Label (e.g. Client name)"
+                    value={pendingStopName}
+                    onChange={(e) => setPendingStopName(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-gray-100 placeholder-gray-500 focus:bg-gray-700 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" />
                 </div>
                 <div className="flex gap-3">
                   <button onClick={(e) => { e.stopPropagation(); handleCancel(); }}
@@ -440,6 +483,36 @@ export default function Home() {
                   <button onClick={(e) => { e.stopPropagation(); handleAccept(); }}
                     className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.97] shadow-lg shadow-blue-500/20">
                     {pt.accept}
+                  </button>
+                </div>
+                {error && (
+                  <div className="bg-red-900/30 border border-red-500/20 text-red-400 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                    <span>⚠️</span> {error}
+                  </div>
+                )}
+              </div>
+            ) : arrivedStop ? (
+              <div className="px-4 pb-3 space-y-3">
+                <div className="bg-emerald-900/30 border border-emerald-500/30 rounded-2xl p-5 text-center">
+                  <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mb-2">🚩 {pt.arrived}</p>
+                  {arrivedStop.customer.name ? (
+                    <>
+                      <p className="text-base text-gray-100 font-bold leading-relaxed">{arrivedStop.customer.name}</p>
+                      <p className="text-xs text-gray-400 mt-1">{arrivedStop.customer.address}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm sm:text-base text-gray-100 font-semibold leading-relaxed">{arrivedStop.customer.address}</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-2">{pt.arrivedAt} {arrivedStop.order} / {sortedWps.length}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={(e) => { e.stopPropagation(); handleArrivedSkip(); }}
+                    className="flex-1 py-3 bg-gray-700 text-white text-sm font-bold rounded-xl hover:bg-gray-600 transition-all active:scale-[0.97]">
+                    {rt.skip}
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); handleArrivedDone(); }}
+                    className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white text-sm font-bold rounded-xl hover:from-emerald-700 hover:to-green-700 transition-all active:scale-[0.97] shadow-lg shadow-emerald-500/30">
+                    ✅ {pt.markDone}
                   </button>
                 </div>
                 {error && (

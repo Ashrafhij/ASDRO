@@ -194,7 +194,11 @@ export default function CustomerInput({ customers, onChange, onAdd, onFocus: onF
                 {i + 1}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-gray-100 text-sm truncate">{c.address || `Stop ${i + 1}`}</p>
+                {c.name ? (
+                  <><p className="text-gray-100 text-sm font-medium truncate">{c.name}</p><p className="text-gray-500 text-[11px] truncate">{c.address}</p></>
+                ) : (
+                  <p className="text-gray-100 text-sm truncate">{c.address || `Stop ${i + 1}`}</p>
+                )}
               </div>
               <button onClick={() => removeCustomer(c.id)}
                 className="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-700/50 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all flex items-center justify-center text-xs active:scale-90">

@@ -95,6 +95,9 @@ https://maps.app.goo.gl/abc123`,
     preview: 'Preview',
     accept: 'Accept',
     cancel: 'Cancel',
+    arrived: "You've arrived",
+    arrivedAt: 'Arrived at',
+    markDone: 'Mark done',
   },
 };
 
@@ -185,6 +188,9 @@ https://maps.app.goo.gl/abc123`,
     preview: 'תצוגה מקדימה',
     accept: 'אישור',
     cancel: 'ביטול',
+    arrived: 'הגעת ליעד',
+    arrivedAt: 'הגעת לתחנה',
+    markDone: 'סמן כבוצע',
   },
 };
 
@@ -275,6 +281,9 @@ https://maps.app.goo.gl/abc123`,
     preview: 'معاينة',
     accept: 'قبول',
     cancel: 'إلغاء',
+    arrived: 'لقد وصلت',
+    arrivedAt: 'وصلت إلى',
+    markDone: 'تحديث كمكتمل',
   },
 };
 
