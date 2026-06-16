@@ -572,19 +572,27 @@ export default function Home() {
               </div>
             ) : hasRoute ? (
               <div className="px-4 pb-3 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className="text-gray-100 font-semibold">{sortedWps.length} {rt.stops}</span>
-                    <span className="text-gray-500">·</span>
-                    <span className="text-gray-300">{route!.totalDistance.toFixed(1)} {rt.km}</span>
-                    <span className="text-gray-500">·</span>
-                    <span className="text-gray-300">
+                <div className="flex justify-between items-stretch pt-3 pb-2 px-2">
+                  <div className="flex flex-col items-center flex-1">
+                    <span className="text-xl font-bold text-white">{sortedWps.length}</span>
+                    <span className="text-xs text-gray-400 mt-0.5">{rt.stops}</span>
+                  </div>
+                  <div className="flex flex-col items-center flex-1 border-x border-gray-700/50">
+                    <span className="text-xl font-bold text-white">{route!.totalDistance.toFixed(1)}</span>
+                    <span className="text-xs text-gray-400 mt-0.5">{rt.km}</span>
+                  </div>
+                  <div className="flex flex-col items-center flex-1">
+                    <span className="text-xl font-bold text-white">
                       {route!.totalDuration >= 60
-                        ? `${Math.floor(route!.totalDuration / 60)}h ${Math.round(route!.totalDuration % 60)}m`
-                        : `${Math.round(route!.totalDuration)} ${rt.min}`}
+                        ? `${Math.floor(route!.totalDuration / 60)}`
+                        : `${Math.round(route!.totalDuration)}`}
+                    </span>
+                    <span className="text-xs text-gray-400 mt-0.5">
+                      {route!.totalDuration >= 60
+                        ? `h ${Math.round(route!.totalDuration % 60)}m`
+                        : rt.min}
                     </span>
                   </div>
-                  <div className="w-5" />
                 </div>
                 {/* Reoptimize button */}
                 <div className="flex gap-2">
