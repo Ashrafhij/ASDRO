@@ -25,40 +25,35 @@ interface MapViewProps {
   pendingCustomer?: Customer | null;
 }
 
-function addRoutePolyline(group: L.LayerGroup, coords: [number, number][], weight: number, color: string, opacity: number, dashed: boolean) {
-  const dashOpts = dashed ? { dashArray: '8,8' } : {};
-  L.polyline(coords, { color: '#ffffff', weight: weight + 3, opacity: 0.1, ...dashOpts }).addTo(group);
-  L.polyline(coords, { color: '#ffffff', weight: weight + 1, opacity: 0.25, ...dashOpts }).addTo(group);
-  L.polyline(coords, { color, weight, opacity, ...dashOpts }).addTo(group);
+function addRoutePolyline(group: L.LayerGroup, coords: [number, number][]) {
+  L.polyline(coords, { color: '#4c1d95', weight: 10, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(group);
+  L.polyline(coords, { color: '#8b5cf6', weight: 6, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }).addTo(group);
 }
 
 function driverIconHtml(heading?: number) {
-  const cone = heading !== undefined
-    ? `<div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%) rotate(${heading}deg);transform-origin:bottom center;">
-        <svg width="16" height="20" viewBox="0 0 16 20">
-          <path d="M8 0 L16 20 L8 14 L0 20 Z" fill="rgba(59,130,246,0.45)" />
-        </svg>
-      </div>`
-    : '';
+  const rotation = heading !== undefined ? `rotate(${heading}deg)` : '';
   return `
-    <div style="position:relative;width:44px;height:44px">
-      ${cone}
-      <div style="position:absolute;inset:-6px;border-radius:50%;background:rgba(59,130,246,0.12);animation:pulse-ring 2s infinite;z-index:1"></div>
-      <div style="position:absolute;inset:-1px;border-radius:50%;background:rgba(59,130,246,0.25);z-index:2"></div>
-      <div style="position:absolute;inset:5px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border:3px solid #fff;box-shadow:0 2px 8px rgba(37,99,235,0.5);display:flex;align-items:center;justify-content:center;z-index:3">
-        <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-      </div>
+    <div style="position:relative;width:44px;height:44px;transform:${rotation};transform-origin:center center;transition:transform 0.15s ease-out">
+      <svg width="44" height="44" viewBox="0 0 44 44" style="filter:drop-shadow(0 3px 8px rgba(6,182,212,0.5))">
+        <defs>
+          <linearGradient id="arrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#22d3ee" />
+            <stop offset="100%" stop-color="#0891b2" />
+          </linearGradient>
+        </defs>
+        <path d="M22 3 L40 40 Q22 31 4 40 Z" fill="url(#arrGrad)" stroke="#164e63" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M22 10 L33 37 Q22 30 11 37 Z" fill="#67e8f9" opacity="0.35"/>
+      </svg>
     </div>`;
 }
 
 const startIconHtml = `<div style="width:28px;height:28px;border-radius:50%;background:#f59e0b;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#fff">S</div>`;
 
-function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, glow: string, label?: string) {
+function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, glow: string) {
   const ring = pulse ? `<div style="position:absolute;inset:-6px;border-radius:50%;background:${glow};animation:pulse-ring 2s infinite;z-index:1"></div>` : '';
   const shadow = pulse ? `0 3px 14px ${glow}` : '0 2px 6px rgba(0,0,0,0.3)';
   const fontSize = size >= 32 ? 13 : size >= 28 ? 11 : 10;
-  const lbl = label ? `<div style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:4px;background:rgba(17,24,39,0.92);color:#e5e7eb;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;border:1px solid rgba(75,85,99,0.5);box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;z-index:10">${label}</div>` : '';
-  return `<div style="position:relative;width:${size}px;height:${size}px">${lbl}${ring}<div style="position:absolute;inset:0;border-radius:50%;background:${bg};border:3px solid #fff;box-shadow:${shadow};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:bold;color:#fff;z-index:2">${order}</div></div>`;
+  return `<div style="position:relative;width:${size}px;height:${size}px">${ring}<div style="position:absolute;inset:0;border-radius:50%;background:${bg};border:3px solid #fff;box-shadow:${shadow};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:bold;color:#fff;z-index:2">${order}</div></div>`;
 }
 
 export default forwardRef<MapViewRef, MapViewProps>(function MapView({
@@ -86,8 +81,8 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, { zoomControl: true, zoom: 13 }).setView([32.0, 34.8], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
       maxZoom: 19,
     }).addTo(map);
     const group = L.layerGroup().addTo(map);
@@ -152,7 +147,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         const isNext = wp.customer.id === nextStopId;
         const isArrived = arrivedStopId === wp.customer.id;
 
-        const stopLabel = (!isDone && !isSkipped) ? (wp.customer.name || wp.customer.address || '') : undefined;
+        const stopTooltip = (!isDone && !isSkipped) ? (wp.customer.name || wp.customer.address || '') : undefined;
 
         let icon: L.DivIcon;
         if (isDone) {
@@ -160,30 +155,28 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         } else if (isSkipped) {
           icon = L.divIcon({ html: stopIconHtml(0, 26, '#4b5563', false, ''), className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
         } else if (isArrived) {
-          icon = L.divIcon({ html: stopIconHtml(wp.order, 42, 'linear-gradient(135deg,#10b981,#047857)', true, 'rgba(16,185,129,0.4)', stopLabel), className: '', iconSize: [42, 42], iconAnchor: [21, 21] });
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 42, 'linear-gradient(135deg,#10b981,#047857)', true, 'rgba(16,185,129,0.4)'), className: '', iconSize: [42, 42], iconAnchor: [21, 21] });
         } else if (isNext) {
-          icon = L.divIcon({ html: stopIconHtml(wp.order, 38, 'linear-gradient(135deg,#f59e0b,#d97706)', true, 'rgba(245,158,11,0.3)', stopLabel), className: '', iconSize: [38, 38], iconAnchor: [19, 19] });
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 38, 'linear-gradient(135deg,#f59e0b,#d97706)', true, 'rgba(245,158,11,0.3)'), className: '', iconSize: [38, 38], iconAnchor: [19, 19] });
         } else {
-          icon = L.divIcon({ html: stopIconHtml(wp.order, 30, 'linear-gradient(135deg,#10b981,#059669)', false, '', stopLabel), className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
+          icon = L.divIcon({ html: stopIconHtml(wp.order, 30, 'linear-gradient(135deg,#10b981,#059669)', false, ''), className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
         }
 
-        L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isArrived ? 600 : isNext ? 500 : 0 })
-          .addTo(group)
-          .bindPopup(`<b>${mt.stop} ${wp.order}: ${wp.customer.address}</b><br/>${mt.estArrival}: ${wp.estimatedArrival}`);
+        const marker = L.marker([wp.customer.location.lat, wp.customer.location.lng], { icon, zIndexOffset: isArrived ? 600 : isNext ? 500 : 0 })
+          .addTo(group);
+        if (stopTooltip) {
+          marker.bindTooltip(stopTooltip, { permanent: true, direction: 'top', offset: [0, -4], className: 'stop-tooltip' });
+        }
         bounds.push([wp.customer.location.lat, wp.customer.location.lng]);
 
         if (isDone || isSkipped) return;
 
-        const polyWeight = followDriver ? 6 : 4;
-        const polyColor = followDriver ? '#60a5fa' : '#3b82f6';
-        const polyOpacity = 0.9;
-
         if (wp.legGeometry && wp.legGeometry.length > 0) {
-          addRoutePolyline(group, wp.legGeometry as [number, number][], polyWeight, polyColor, polyOpacity, false);
+          addRoutePolyline(group, wp.legGeometry as [number, number][]);
         } else {
           const prev = i === 0 ? (driverLocation || startLocation) : sorted[i - 1].customer.location;
           if (prev && !cs.has(sorted[i - 1]?.customer.id) && !sk.has(sorted[i - 1]?.customer.id)) {
-            addRoutePolyline(group, [[prev.lat, prev.lng], [wp.customer.location.lat, wp.customer.location.lng]], polyWeight, polyColor, polyOpacity, false);
+            addRoutePolyline(group, [[prev.lat, prev.lng], [wp.customer.location.lat, wp.customer.location.lng]]);
           }
         }
       });
@@ -196,7 +189,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         });
         L.marker([c.location.lat, c.location.lng], { icon })
           .addTo(group)
-          .bindPopup(`<b>${mt.stop} ${i + 1}</b><br/>${c.address || ''}`);
+          .bindTooltip(c.name || c.address || `${mt.stop} ${i + 1}`, { permanent: true, direction: 'top', offset: [0, -4], className: 'stop-tooltip' });
         bounds.push([c.location.lat, c.location.lng]);
       });
     }
