@@ -23,6 +23,7 @@ interface MapViewProps {
   completedIds?: Set<string>;
   skippedIds?: Set<string>;
   pendingCustomer?: Customer | null;
+  navigationMode?: boolean;
 }
 
 function maneuverIconHtml(type: string, modifier: string | undefined, opacity: number): string {
@@ -41,8 +42,24 @@ function maneuverIconHtml(type: string, modifier: string | undefined, opacity: n
   return `<div style="width:24px;height:24px;border-radius:50%;background:${bg};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;opacity:${opacity}">${inner}</div>`;
 }
 
-function addRoutePolyline(group: L.LayerGroup, coords: [number, number][]) {
-  L.polyline(coords, { color: '#1a73e8', weight: 7, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(group);
+function addRoutePolyline(group: L.LayerGroup, coords: [number, number][], navigationMode?: boolean) {
+  if (navigationMode) {
+    L.polyline(coords, { color: '#1a1a2e', weight: 11, opacity: 0.5, lineCap: 'round', lineJoin: 'round' }).addTo(group);
+    L.polyline(coords, { color: '#3b00d1', weight: 8, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }).addTo(group);
+  } else {
+    L.polyline(coords, { color: '#1a73e8', weight: 7, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(group);
+  }
+}
+
+function navChevronIconHtml(heading?: number) {
+  const rot = heading !== undefined ? heading : 0;
+  return `
+    <div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.85);box-shadow:0 2px 8px rgba(0,0,0,0.12);"></div>
+      <svg width="24" height="24" viewBox="0 0 24 24" style="transform:rotate(${rot}deg);position:relative;z-index:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.15));">
+        <path d="M12 2 L20 18 L14 14 L14 22 L10 22 L10 14 L4 18 Z" fill="#1a73e8" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+    </div>`;
 }
 
 function driverIconHtml(heading?: number) {
@@ -72,7 +89,7 @@ function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, g
 
 export default forwardRef<MapViewRef, MapViewProps>(function MapView({
   waypoints, customers = [], driverLocation, startLocation, height = '100%', followDriver, onManualPan,
-  nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer,
+  nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, navigationMode,
 }, ref) {
   const { t } = useI18n();
   const mt = t.map;
@@ -166,7 +183,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         const isNext = wp.customer.id === nextStopId;
         const isArrived = arrivedStopId === wp.customer.id;
 
-        const stopTooltip = (!isDone && !isSkipped) ? (wp.customer.name || wp.customer.address || '') : undefined;
+        const stopTooltip = (!isDone && !isSkipped && !navigationMode) ? (wp.customer.name || wp.customer.address || '') : undefined;
 
         let icon: L.DivIcon;
         if (isDone) {
@@ -216,7 +233,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
           legCoords = legCoords.slice(closestIdx);
         }
 
-        addRoutePolyline(group, legCoords);
+        addRoutePolyline(group, legCoords, navigationMode);
 
         // Turn arrows for current leg
         if (isCurrentLeg && wp.steps && wp.steps.length > 0) {
@@ -241,9 +258,11 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
           html: stopIconHtml(i + 1, 28, '#1a73e8', false, ''),
           className: '', iconSize: [28, 28], iconAnchor: [14, 14],
         });
-        L.marker([c.location.lat, c.location.lng], { icon })
-          .addTo(group)
-          .bindTooltip(c.name || c.address || `${mt.stop} ${i + 1}`, { permanent: true, direction: 'top', offset: [0, -4], className: 'stop-tooltip' });
+        const custMarker = L.marker([c.location.lat, c.location.lng], { icon })
+          .addTo(group);
+        if (!navigationMode) {
+          custMarker.bindTooltip(c.name || c.address || `${mt.stop} ${i + 1}`, { permanent: true, direction: 'top', offset: [0, -4], className: 'stop-tooltip' });
+        }
         bounds.push([c.location.lat, c.location.lng]);
       });
     }
@@ -273,27 +292,28 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     }
   }, [driverLocation, followDriver]);
 
-  // Driver marker (blue dot with heading)
+  // Driver marker (blue dot with heading, or 3D chevron in navigation mode)
   useEffect(() => {
     if (!driverLocation) return;
     const map = mapRef.current;
     if (!map) return;
 
+    const iconHtml = navigationMode ? navChevronIconHtml(driverLocation.heading) : driverIconHtml(driverLocation.heading);
     if (driverMarkerRef.current) {
       driverMarkerRef.current.setLatLng([driverLocation.lat, driverLocation.lng]);
       driverMarkerRef.current.setIcon(L.divIcon({
-        html: driverIconHtml(driverLocation.heading),
+        html: iconHtml,
         className: '', iconSize: [44, 44], iconAnchor: [22, 22],
       }));
     } else {
       const icon = L.divIcon({
-        html: driverIconHtml(driverLocation.heading),
+        html: iconHtml,
         className: '', iconSize: [44, 44], iconAnchor: [22, 22],
       });
       const marker = L.marker([driverLocation.lat, driverLocation.lng], { icon, zIndexOffset: 1000 }).addTo(map);
       driverMarkerRef.current = marker;
     }
-  }, [driverLocation]);
+  }, [driverLocation, navigationMode]);
 
   // Initial fit: when first driver location arrives, fit bounds to show everything
   useEffect(() => {

@@ -12,6 +12,7 @@ import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
 import ClipboardBanner from '@/components/ClipboardBanner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import DriverNavigationView from '@/components/DriverNavigationView';
 import type { MapViewRef } from '@/components/MapView';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { trackEventFireAndForget } from '@/lib/analytics';
@@ -48,6 +49,7 @@ export default function Home() {
   const [pendingStopName, setPendingStopName] = useState('');
   useEffect(() => { setPendingStopName(''); }, [pendingCustomer]);
   const [followDriver, setFollowDriver] = useState(true);
+  const [navigationMode, setNavigationMode] = useState(false);
   const [nextStopDistance, setNextStopDistance] = useState<number | null>(null);
   const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
   const getSnapPoints = () => {
@@ -86,6 +88,11 @@ export default function Home() {
   useEffect(() => { save('completed', [...completedIds]); }, [completedIds]);
   useEffect(() => { save('skipped', [...skippedIds]); }, [skippedIds]);
   useEffect(() => { if (newlyAddedId) { const t = setTimeout(() => setNewlyAddedId(null), 3000); return () => clearTimeout(t); } }, [newlyAddedId]);
+
+  // Auto-exit navigation mode when all stops are done
+  useEffect(() => {
+    if (navigationMode && hasRoute && !activeWaypoint) setNavigationMode(false);
+  }, [navigationMode, hasRoute, activeWaypoint]);
 
   // Check for incoming shared location from Web Share Target
   useEffect(() => {
@@ -374,14 +381,28 @@ export default function Home() {
           skippedIds={skippedIds}
           pendingCustomer={pendingCustomer}
           followDriver={followDriver && !!hasRoute}
+          navigationMode={navigationMode}
           onManualPan={() => {
             const snaps = getSnapPoints();
             if (Math.abs(getCurrentTranslate() - snaps.collapsed) > 20) snapTo(snaps.collapsed);
           }}
           height="100%"
         />
-        {/* Next-turn floating banner */}
-        {hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
+        {/* DriverNavigationView overlay */}
+        {navigationMode && hasRoute && activeWaypoint && (
+          <DriverNavigationView
+            instruction={activeWaypoint.nextInstruction || ''}
+            turnType={activeWaypoint.steps?.[0]?.type}
+            turnModifier={activeWaypoint.steps?.[0]?.modifier}
+            heading={driverLocation?.heading}
+            nextStep={activeWaypoint.steps?.[1] ? { type: activeWaypoint.steps[1].type, modifier: activeWaypoint.steps[1].modifier, instruction: activeWaypoint.steps[1].instruction } : null}
+            distance={nextStopDistance}
+            onCompass={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
+            onExit={() => setNavigationMode(false)}
+          />
+        )}
+        {/* Next-turn floating banner (hidden in nav mode) */}
+        {!navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
           <div className="absolute bottom-0 left-0 right-0 z-[5] pointer-events-none p-3 pb-[max(env(safe-area-inset-bottom),8px)]">
             <div className="pointer-events-auto bg-gray-900/90 backdrop-blur-xl border border-blue-500/25 rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
@@ -444,6 +465,7 @@ export default function Home() {
       </div>
 
       {/* ===== Locate button + Follow toggle (top-right) ===== */}
+      {!navigationMode && (
       <div className={`absolute right-4 z-40 flex gap-2 transition-all ${isOnline ? 'top-4' : 'top-14'}`}>
         <button onClick={() => {
             if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); setFollowDriver(true); }
@@ -463,6 +485,7 @@ export default function Home() {
           </button>
         )}
         </div>
+      )}
 
       {/* ===== Clipboard detection banner ===== */}
       {pendingLocation && (
@@ -594,7 +617,7 @@ export default function Home() {
                     </span>
                   </div>
                 </div>
-                {/* Reoptimize button */}
+                {/* Navigate + Reoptimize buttons */}
                 <div className="flex gap-2">
                   <button onClick={optimize} disabled={loading || !isOnline}
                     className="flex-1 py-3 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-all active:scale-[0.97] border border-gray-600/50 flex items-center justify-center gap-2 disabled:opacity-40">
@@ -604,6 +627,13 @@ export default function Home() {
                       <><span className="text-base">🔄</span> {pt.reoptimize}</>
                     )}
                   </button>
+                  {!navigationMode && (
+                    <button onClick={() => { setNavigationMode(true); }}
+                      className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.97] shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                      Navigate
+                    </button>
+                  )}
                 </div>
                 {/* Error display */}
                 {error && (
