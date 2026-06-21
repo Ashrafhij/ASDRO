@@ -83,6 +83,15 @@ export default function Home() {
   const nextStopId = activeWaypoint?.customer.id || null;
   const arrivedStopId = arrivedStop?.customer.id || null;
 
+  function turnArrowSvg(size: number, type: string, modifier?: string): string {
+    const angle: Record<string, number> = { left: -90, right: 90, straight: 0, slight_left: -40, slight_right: 40, sharp_left: -135, sharp_right: 135, uturn: 180 };
+    if (type === 'roundabout' || type === 'rotary') {
+      return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M12 3 L8 8 L16 8 Z" fill="#fff"/></svg>`;
+    }
+    const rot = angle[modifier || ''] ?? 0;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="#fff"><g transform="rotate(${rot}, 12, 12)"><path d="M12 2 L18 10 L14 10 L14 22 L10 22 L10 10 L6 10 Z"/></g></svg>`;
+  }
+
   useEffect(() => { save('customers', customers); }, [customers]);
   useEffect(() => { save('route', route); }, [route]);
   useEffect(() => { save('completed', [...completedIds]); }, [completedIds]);
@@ -390,15 +399,42 @@ export default function Home() {
         />
       </div>
 
-      {/* DriverNavigationView overlay (outside map container to avoid z-index conflicts) */}
+      {/* Standalone green instruction banner (navigation mode, top-most card at z-50) */}
+      {navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
+        <div className={`fixed inset-x-4 z-50 transition-all duration-300 ${!isOnline ? 'top-16' : 'top-4'}`}>
+          <div className="relative pointer-events-auto">
+            <div className="bg-[#0f5156] rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl">
+              <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0"
+                dangerouslySetInnerHTML={{ __html: turnArrowSvg(28, activeWaypoint.steps?.[0]?.type || '', activeWaypoint.steps?.[0]?.modifier) }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold text-white leading-tight">{activeWaypoint.nextInstruction}</p>
+              </div>
+              {nextStopDistance !== null && nextStopDistance !== undefined && nextStopDistance > 0 && (
+                <div className="shrink-0 text-right">
+                  <p className="text-[10px] text-white/50 uppercase tracking-wider">{pt.remaining}</p>
+                  <p className="text-xl font-bold text-white tabular-nums">
+                    {nextStopDistance >= 1000 ? `${(nextStopDistance / 1000).toFixed(1)}` : `${Math.round(nextStopDistance)}`}
+                  </p>
+                  <p className="text-[10px] text-white/50">{nextStopDistance >= 1000 ? 'km' : 'm'}</p>
+                </div>
+              )}
+            </div>
+            {activeWaypoint.steps?.[1] && (
+              <div className="absolute -bottom-9 left-3 bg-[#0a3d40] rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg">
+                <span className="text-[10px] text-white/60 font-semibold uppercase tracking-wide">Then</span>
+                <div className="w-4 h-4 flex items-center justify-center"
+                  dangerouslySetInnerHTML={{ __html: turnArrowSvg(14, activeWaypoint.steps[1].type, activeWaypoint.steps[1].modifier) }} />
+                <span className="text-[11px] text-white font-medium truncate max-w-[130px]">{activeWaypoint.steps[1].instruction}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* DriverNavigationView overlay (buttons only — banner is rendered standalone above at z-50) */}
       {navigationMode && hasRoute && activeWaypoint && (
         <DriverNavigationView
-          instruction={activeWaypoint.nextInstruction || ''}
-          turnType={activeWaypoint.steps?.[0]?.type}
-          turnModifier={activeWaypoint.steps?.[0]?.modifier}
           heading={driverLocation?.heading}
-          nextStep={activeWaypoint.steps?.[1] ? { type: activeWaypoint.steps[1].type, modifier: activeWaypoint.steps[1].modifier, instruction: activeWaypoint.steps[1].instruction } : null}
-          distance={nextStopDistance}
           isOnline={isOnline}
           onCompass={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
           onExit={() => setNavigationMode(false)}
@@ -432,7 +468,7 @@ export default function Home() {
       )}
 
       {/* ===== Corner menu button (top-left) ===== */}
-      <div className={`absolute left-12 z-40 transition-all ${isOnline ? 'top-4' : 'top-14'}`}>
+      <div className={`absolute left-12 z-40 transition-all ${navigationMode ? 'top-36' : isOnline ? 'top-4' : 'top-14'}`}>
         <button onClick={() => setMenuOpen(!menuOpen)}
           className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center text-white transition-all active:scale-90 hover:bg-gray-800/90">
           <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
@@ -597,7 +633,7 @@ export default function Home() {
               </div>
             ) : hasRoute ? (
               <div className="px-4 pb-3 space-y-3">
-                <div className="flex justify-between items-stretch pt-3 pb-2 px-2">
+                <div className="flex justify-between items-stretch py-4 px-2">
                   <div className="flex flex-col items-center flex-1">
                     <span className="text-xl font-bold text-white">{sortedWps.length}</span>
                     <span className="text-xs text-gray-400 mt-0.5">{rt.stops}</span>
