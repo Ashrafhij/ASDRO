@@ -1,4 +1,4 @@
-import { Location, Customer, Waypoint, OptimizedRoute } from './types';
+import { Location, Customer, Waypoint, OptimizedRoute, TurnStep } from './types';
 
 const OSRM_BASE = 'https://router.project-osrm.org';
 
@@ -62,7 +62,7 @@ function formatInstruction(step: { maneuver: { type: string; modifier?: string }
   return `${typeLabel} ${dir}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
 }
 
-async function getOSRMRoute(start: Location, end: Location, locale?: string, retries = 2): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string } | null> {
+async function getOSRMRoute(start: Location, end: Location, locale?: string, retries = 2): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string; steps: TurnStep[] } | null> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
   const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true`;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -77,16 +77,29 @@ async function getOSRMRoute(start: Location, end: Location, locale?: string, ret
       const route = data.routes[0];
       let geometry: [number, number][] | undefined;
       let instruction: string | undefined;
+      let steps: TurnStep[] = [];
       if (route.geometry) geometry = decodePolyline(route.geometry);
       if (route.legs?.[0]?.steps?.length) {
-        const first = route.legs[0].steps.find((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart');
+        const legSteps = route.legs[0].steps;
+        const first = legSteps.find((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart');
         if (first) instruction = formatInstruction(first, locale);
+        steps = legSteps
+          .filter((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart' && s.maneuver.type !== 'arrive')
+          .map((s: any) => ({
+            type: s.maneuver.type,
+            modifier: s.maneuver.modifier,
+            location: { lat: s.maneuver.location[1], lng: s.maneuver.location[0] },
+            name: s.name || '',
+            distance: s.distance,
+            instruction: formatInstruction(s, locale),
+          }));
       }
       return {
         distance: route.distance / 1000,
         duration: route.duration / 60,
         geometry,
         instruction,
+        steps,
       };
     } catch (e) {
       if (attempt < retries) { await new Promise(r => setTimeout(r, 1000)); continue; }
@@ -213,6 +226,7 @@ export async function optimizeRoute(
     const dur = osrm ? osrm.duration : (dist / 40) * 60;
     const legGeometry = osrm?.geometry;
     const nextInstruction = osrm?.instruction;
+    const steps = osrm?.steps;
 
     totalDist += dist;
     totalDur += dur;
@@ -232,6 +246,7 @@ export async function optimizeRoute(
       timeFromPrevious: parseFloat(dur.toFixed(1)),
       legGeometry,
       nextInstruction,
+      steps,
     });
   }
 

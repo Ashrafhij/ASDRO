@@ -13,6 +13,15 @@ export interface Customer {
   notes: string;
 }
 
+export interface TurnStep {
+  type: string;
+  modifier?: string;
+  location: Location;
+  name: string;
+  distance: number;
+  instruction: string;
+}
+
 export interface Waypoint {
   customer: Customer;
   order: number;
@@ -21,6 +30,7 @@ export interface Waypoint {
   timeFromPrevious: number;
   legGeometry?: [number, number][];
   nextInstruction?: string;
+  steps?: TurnStep[];
 }
 
 export interface OptimizedRoute {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Location, Waypoint, Customer } from '@/lib/types';
+import { Location, Waypoint, Customer, TurnStep } from '@/lib/types';
 import { useI18n } from '@/lib/i18n-context';
 
 export interface MapViewRef {
@@ -23,6 +23,22 @@ interface MapViewProps {
   completedIds?: Set<string>;
   skippedIds?: Set<string>;
   pendingCustomer?: Customer | null;
+}
+
+function maneuverIconHtml(type: string, modifier: string | undefined, opacity: number): string {
+  const bg = type === 'fork' ? 'rgba(245,158,11,0.9)'
+    : type === 'merge' ? 'rgba(139,92,246,0.9)'
+    : type === 'roundabout' || type === 'rotary' ? 'rgba(16,185,129,0.9)'
+    : 'rgba(26,115,232,0.85)';
+  const angle: Record<string, number> = { left: -90, right: 90, straight: 0, slight_left: -40, slight_right: 40, sharp_left: -135, sharp_right: 135, uturn: 180 };
+  let inner: string;
+  if (type === 'roundabout' || type === 'rotary') {
+    inner = `<svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M12 3 L8 8 L16 8 Z" fill="#fff"/></svg>`;
+  } else {
+    const rot = angle[modifier || ''] ?? 0;
+    inner = `<svg width="14" height="14" viewBox="0 0 24 24"><g transform="rotate(${rot}, 12, 12)"><path d="M12 2 L18 10 L14 10 L14 22 L10 22 L10 10 L6 10 Z" fill="#fff"/></g></svg>`;
+  }
+  return `<div style="width:24px;height:24px;border-radius:50%;background:${bg};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;opacity:${opacity}">${inner}</div>`;
 }
 
 function addRoutePolyline(group: L.LayerGroup, coords: [number, number][]) {
@@ -96,10 +112,14 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     const m = mapRef.current;
     if (!m) return;
     const handler = () => { manualPanRef.current = true; onManualPan?.(); };
+    const clickHandler = (e: L.LeafletMouseEvent) => {
+      window.open(`https://www.google.com/maps?q=${e.latlng.lat},${e.latlng.lng}&layer=c`, '_blank');
+    };
     m.on('dragstart', handler);
     m.on('zoomstart', handler);
     m.on('wheel', handler);
-    return () => { m.off('dragstart', handler); m.off('zoomstart', handler); m.off('wheel', handler); };
+    m.on('click', clickHandler);
+    return () => { m.off('dragstart', handler); m.off('zoomstart', handler); m.off('wheel', handler); m.off('click', clickHandler); };
   }, [onManualPan]);
 
   // Render stops (either route waypoints or pre-route customer markers) + polylines + fit bounds
@@ -196,6 +216,22 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         }
 
         addRoutePolyline(group, legCoords);
+
+        // Turn arrows for current leg
+        if (isCurrentLeg && wp.steps && wp.steps.length > 0) {
+          const relevantSteps = wp.steps.filter(s => s.type !== 'continue');
+          const maxSteps = Math.min(relevantSteps.length, 5);
+          for (let si = 0; si < maxSteps; si++) {
+            const step = relevantSteps[si];
+            const opacity = Math.max(0.35, 1 - si * 0.15);
+            const arrowIcon = L.divIcon({
+              html: maneuverIconHtml(step.type, step.modifier, opacity),
+              className: '', iconSize: [24, 24], iconAnchor: [12, 12],
+            });
+            const arrowMarker = L.marker([step.location.lat, step.location.lng], { icon: arrowIcon, zIndexOffset: 450 - si }).addTo(group);
+            arrowMarker.bindTooltip(step.instruction, { permanent: true, direction: 'top', offset: [0, -2], className: 'turn-tooltip' });
+          }
+        }
       });
     } else if (customers.length > 0) {
       // Pre-route customer markers
