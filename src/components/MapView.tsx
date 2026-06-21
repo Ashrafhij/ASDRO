@@ -76,6 +76,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
 }, ref) {
   const { t } = useI18n();
   const mt = t.map;
+  const FOLLOW_ZOOM = 18;
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const driverMarkerRef = useRef<L.Marker | null>(null);
@@ -86,7 +87,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
 
   useImperativeHandle(ref, () => ({
     recenter: (lat: number, lng: number) => {
-      mapRef.current?.setView([lat, lng], 16, { animate: true });
+      mapRef.current?.setView([lat, lng], FOLLOW_ZOOM, { animate: true });
       manualPanRef.current = false;
     }
   }), []);
@@ -266,7 +267,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     if (manualPanRef.current) return;
     if (followEntryRef.current) {
       followEntryRef.current = false;
-      mapRef.current.setView([driverLocation.lat, driverLocation.lng], 16, { animate: true, duration: 0.5 });
+      mapRef.current.setView([driverLocation.lat, driverLocation.lng], FOLLOW_ZOOM, { animate: true, duration: 0.5 });
     } else {
       mapRef.current.panTo([driverLocation.lat, driverLocation.lng], { animate: true, duration: 0.5 });
     }
@@ -299,18 +300,22 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     if (!driverLocation || !mapRef.current) return;
     if (initialFitRef.current) {
       initialFitRef.current = false;
-      const allBounds: [number, number][] = [[driverLocation.lat, driverLocation.lng]];
-      customers.forEach(c => allBounds.push([c.location.lat, c.location.lng]));
-      waypoints.forEach(w => allBounds.push([w.customer.location.lat, w.customer.location.lng]));
-      if (startLocation) allBounds.push([startLocation.lat, startLocation.lng]);
-      if (allBounds.length > 1) {
-        mapRef.current.fitBounds(allBounds, { padding: [60, 60], maxZoom: 16, animate: true });
+      if (followDriver) {
+        mapRef.current.setView([driverLocation.lat, driverLocation.lng], FOLLOW_ZOOM, { animate: true, duration: 0.5 });
       } else {
-        mapRef.current.setView([driverLocation.lat, driverLocation.lng], 15, { animate: true });
+        const allBounds: [number, number][] = [[driverLocation.lat, driverLocation.lng]];
+        customers.forEach(c => allBounds.push([c.location.lat, c.location.lng]));
+        waypoints.forEach(w => allBounds.push([w.customer.location.lat, w.customer.location.lng]));
+        if (startLocation) allBounds.push([startLocation.lat, startLocation.lng]);
+        if (allBounds.length > 1) {
+          mapRef.current.fitBounds(allBounds, { padding: [60, 60], maxZoom: 16, animate: true });
+        } else {
+          mapRef.current.setView([driverLocation.lat, driverLocation.lng], FOLLOW_ZOOM, { animate: true });
+        }
       }
       manualPanRef.current = false;
     }
-  }, [driverLocation, waypoints, customers, startLocation]);
+  }, [driverLocation, waypoints, customers, startLocation, followDriver]);
 
   // Inject pulse-ring keyframes
   useEffect(() => {
