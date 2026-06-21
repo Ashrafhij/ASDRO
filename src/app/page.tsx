@@ -388,47 +388,48 @@ export default function Home() {
           }}
           height="100%"
         />
-        {/* DriverNavigationView overlay */}
-        {navigationMode && hasRoute && activeWaypoint && (
-          <DriverNavigationView
-            instruction={activeWaypoint.nextInstruction || ''}
-            turnType={activeWaypoint.steps?.[0]?.type}
-            turnModifier={activeWaypoint.steps?.[0]?.modifier}
-            heading={driverLocation?.heading}
-            nextStep={activeWaypoint.steps?.[1] ? { type: activeWaypoint.steps[1].type, modifier: activeWaypoint.steps[1].modifier, instruction: activeWaypoint.steps[1].instruction } : null}
-            distance={nextStopDistance}
-            isOnline={isOnline}
-            onCompass={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
-            onExit={() => setNavigationMode(false)}
-          />
-        )}
-        {/* Next-turn floating banner (hidden in nav mode) */}
-        {!navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
-          <div className="absolute bottom-0 left-0 right-0 z-[5] pointer-events-none p-3 pb-[max(env(safe-area-inset-bottom),8px)]">
-            <div className="pointer-events-auto bg-gray-900/90 backdrop-blur-xl border border-blue-500/25 rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
-                  <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-blue-300 font-semibold uppercase tracking-wider">{pt.nextTurn}</p>
-                <p className="text-sm text-gray-100 font-medium truncate">{activeWaypoint.nextInstruction}</p>
-              </div>
-              {nextStopDistance !== null && (
-                <div className="text-right shrink-0">
-                  <p className="text-[10px] text-gray-400">{pt.remaining}</p>
-                  <p className="text-sm text-gray-100 font-semibold tabular-nums">
-                    {nextStopDistance >= 1000
-                      ? `${(nextStopDistance / 1000).toFixed(1)} km`
-                      : `${Math.round(nextStopDistance)} m`}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* DriverNavigationView overlay (outside map container to avoid z-index conflicts) */}
+      {navigationMode && hasRoute && activeWaypoint && (
+        <DriverNavigationView
+          instruction={activeWaypoint.nextInstruction || ''}
+          turnType={activeWaypoint.steps?.[0]?.type}
+          turnModifier={activeWaypoint.steps?.[0]?.modifier}
+          heading={driverLocation?.heading}
+          nextStep={activeWaypoint.steps?.[1] ? { type: activeWaypoint.steps[1].type, modifier: activeWaypoint.steps[1].modifier, instruction: activeWaypoint.steps[1].instruction } : null}
+          distance={nextStopDistance}
+          isOnline={isOnline}
+          onCompass={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
+          onExit={() => setNavigationMode(false)}
+        />
+      )}
+      {/* Next-turn floating banner (hidden in nav mode) */}
+      {!navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none p-3 pb-[max(env(safe-area-inset-bottom),8px)]">
+          <div className="pointer-events-auto bg-gray-900/90 backdrop-blur-xl border border-blue-500/25 rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
+                <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-blue-300 font-semibold uppercase tracking-wider">{pt.nextTurn}</p>
+              <p className="text-sm text-gray-100 font-medium truncate">{activeWaypoint.nextInstruction}</p>
+            </div>
+            {nextStopDistance !== null && (
+              <div className="text-right shrink-0">
+                <p className="text-[10px] text-gray-400">{pt.remaining}</p>
+                <p className="text-sm text-gray-100 font-semibold tabular-nums">
+                  {nextStopDistance >= 1000
+                    ? `${(nextStopDistance / 1000).toFixed(1)} km`
+                    : `${Math.round(nextStopDistance)} m`}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ===== Corner menu button (top-left) ===== */}
       <div className={`absolute left-12 z-40 transition-all ${isOnline ? 'top-4' : 'top-14'}`}>

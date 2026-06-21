@@ -25,7 +25,7 @@ export default function DriverNavigationView({
   instruction, turnType, turnModifier, heading, nextStep, distance, isOnline = true, onCompass, onExit,
 }: DriverNavigationViewProps) {
   return (
-    <div className="absolute inset-0 z-30 pointer-events-none">
+    <div className="fixed inset-0 z-30 pointer-events-none">
       {/* Top instruction banner */}
       <div className={`absolute inset-x-4 transition-all duration-300 ${!isOnline ? 'top-16' : 'top-4'}`}>
         <div className="relative pointer-events-auto">
