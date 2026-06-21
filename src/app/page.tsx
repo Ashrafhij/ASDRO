@@ -397,6 +397,7 @@ export default function Home() {
             heading={driverLocation?.heading}
             nextStep={activeWaypoint.steps?.[1] ? { type: activeWaypoint.steps[1].type, modifier: activeWaypoint.steps[1].modifier, instruction: activeWaypoint.steps[1].instruction } : null}
             distance={nextStopDistance}
+            isOnline={isOnline}
             onCompass={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
             onExit={() => setNavigationMode(false)}
           />
@@ -502,7 +503,7 @@ export default function Home() {
 
       {/* ===== Offline Banner ===== */}
       {!isOnline && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-600/90 backdrop-blur-sm px-4 py-2.5 pt-[env(safe-area-inset-top)] text-center text-sm font-semibold text-yellow-50 shadow-lg flex items-center justify-center gap-2">
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-yellow-600/90 backdrop-blur-sm px-4 py-2.5 pt-[env(safe-area-inset-top)] text-center text-sm font-semibold text-yellow-50 shadow-lg flex items-center justify-center gap-2">
           <span>⚠️</span> {t.detection.offlineMode}
         </div>
       )}

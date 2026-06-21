@@ -7,6 +7,7 @@ interface DriverNavigationViewProps {
   heading?: number;
   nextStep?: { type: string; modifier?: string; instruction: string } | null;
   distance?: number | null;
+  isOnline?: boolean;
   onCompass?: () => void;
   onExit?: () => void;
 }
@@ -21,12 +22,12 @@ function turnArrowSvg(size: number, type: string, modifier?: string): string {
 }
 
 export default function DriverNavigationView({
-  instruction, turnType, turnModifier, heading, nextStep, distance, onCompass, onExit,
+  instruction, turnType, turnModifier, heading, nextStep, distance, isOnline = true, onCompass, onExit,
 }: DriverNavigationViewProps) {
   return (
     <div className="absolute inset-0 z-30 pointer-events-none">
       {/* Top instruction banner */}
-      <div className="absolute top-4 inset-x-4">
+      <div className={`absolute inset-x-4 transition-all duration-300 ${!isOnline ? 'top-16' : 'top-4'}`}>
         <div className="relative pointer-events-auto">
           <div className="bg-[#0f5156] rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl">
             <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0"
@@ -56,7 +57,7 @@ export default function DriverNavigationView({
       </div>
 
       {/* Top-right action buttons */}
-      <div className="absolute top-4 right-4 pointer-events-auto flex gap-2">
+      <div className={`absolute right-4 pointer-events-auto flex gap-2 transition-all duration-300 ${!isOnline ? 'top-16' : 'top-4'}`}>
         {onExit && (
           <button onClick={onExit} className="w-10 h-10 bg-white/90 rounded-full shadow-lg flex items-center justify-center backdrop-blur-sm active:scale-90 transition-all">
             <svg viewBox="0 0 24 24" className="w-5 h-5 fill-gray-700"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
