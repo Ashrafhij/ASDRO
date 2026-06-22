@@ -19,11 +19,13 @@ interface MapViewProps {
   height?: string;
   followDriver?: boolean;
   onManualPan?: () => void;
+  onMapClick?: (lat: number, lng: number) => void;
   nextStopId?: string | null;
   arrivedStopId?: string | null;
   completedIds?: Set<string>;
   skippedIds?: Set<string>;
   pendingCustomer?: Customer | null;
+  placingLocation?: Location | null;
   navigationMode?: boolean;
 }
 
@@ -90,8 +92,8 @@ function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, g
 }
 
 export default forwardRef<MapViewRef, MapViewProps>(function MapView({
-  waypoints, customers = [], driverLocation, startLocation, endPoint, height = '100%', followDriver, onManualPan,
-  nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, navigationMode,
+  waypoints, customers = [], driverLocation, startLocation, endPoint, height = '100%', followDriver, onManualPan, onMapClick,
+  nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, placingLocation, navigationMode,
 }, ref) {
   const { t } = useI18n();
   const mt = t.map;
@@ -127,16 +129,18 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     return () => { observer.disconnect(); map.remove(); mapRef.current = null; };
   }, []);
 
-  // Event listeners (updatable — re-binds when onManualPan changes)
+  // Event listeners (updatable — re-binds when onManualPan/onMapClick changes)
   useEffect(() => {
     const m = mapRef.current;
     if (!m) return;
-    const handler = () => { manualPanRef.current = true; onManualPan?.(); };
-    m.on('dragstart', handler);
-    m.on('zoomstart', handler);
-    m.on('wheel', handler);
-    return () => { m.off('dragstart', handler); m.off('zoomstart', handler); m.off('wheel', handler); };
-  }, [onManualPan]);
+    const panHandler = () => { manualPanRef.current = true; onManualPan?.(); };
+    m.on('dragstart', panHandler);
+    m.on('zoomstart', panHandler);
+    m.on('wheel', panHandler);
+    const clickHandler = (e: L.LeafletMouseEvent) => onMapClick?.(e.latlng.lat, e.latlng.lng);
+    if (onMapClick) m.on('click', clickHandler);
+    return () => { m.off('dragstart', panHandler); m.off('zoomstart', panHandler); m.off('wheel', panHandler); m.off('click', clickHandler); };
+  }, [onManualPan, onMapClick]);
 
   // Render stops (either route waypoints or pre-route customer markers) + polylines + fit bounds
   useEffect(() => {
@@ -177,6 +181,15 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         .bindPopup(`<b>${pendingCustomer.address || 'New stop'}</b>`);
       bounds.push([pendingCustomer.location.lat, pendingCustomer.location.lng]);
       map.setView([pendingCustomer.location.lat, pendingCustomer.location.lng], 16, { animate: true });
+    }
+
+    if (placingLocation) {
+      const icon = L.divIcon({
+        html: `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border:3px solid #fff;box-shadow:0 0 24px rgba(59,130,246,0.5),0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:#fff">+</div>`,
+        className: '', iconSize: [32, 32], iconAnchor: [16, 16],
+      });
+      L.marker([placingLocation.lat, placingLocation.lng], { icon, zIndexOffset: 900 }).addTo(group);
+      bounds.push([placingLocation.lat, placingLocation.lng]);
     }
 
     if (sorted.length > 0) {
@@ -274,7 +287,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     if (bounds.length > 0 && !followDriver && !manualPanRef.current) {
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
     }
-  }, [waypoints, customers, startLocation, endPoint, mt, followDriver, nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer]);
+  }, [waypoints, customers, startLocation, endPoint, mt, followDriver, nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, placingLocation]);
 
   // Reset manualPan when entering follow mode
   useEffect(() => {

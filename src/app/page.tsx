@@ -56,6 +56,8 @@ export default function Home() {
   const [settingLocation, setSettingLocation] = useState<'start' | 'end' | null>(null);
   const [locationInput, setLocationInput] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
+  const [placingLocation, setPlacingLocation] = useState<Location | null>(null);
+  const [placingAddress, setPlacingAddress] = useState('');
   useEffect(() => { save('routeStart', routeStart); }, [routeStart]);
   useEffect(() => { save('routeEnd', routeEnd); }, [routeEnd]);
   useWakeLock(navigationMode);
@@ -175,6 +177,35 @@ export default function Home() {
     setLocationInput('');
     setError('');
   }, [locationInput, settingLocation, locale, pt]);
+
+  const handleMapClick = useCallback(async (lat: number, lng: number) => {
+    if (!settingLocation) return;
+    const loc: Location = { lat, lng };
+    setPlacingLocation(loc);
+    setPlacingAddress('Loading...');
+    setError('');
+    const addr = await reverseGeocode(lat, lng);
+    setPlacingAddress(addr);
+  }, [settingLocation]);
+
+  const handleConfirmPlacement = useCallback(() => {
+    if (!placingLocation || !settingLocation) return;
+    const entry = { location: placingLocation, label: placingAddress };
+    if (settingLocation === 'start') setRouteStart(entry);
+    else setRouteEnd(entry);
+    setPlacingLocation(null);
+    setPlacingAddress('');
+    setSettingLocation(null);
+    setError('');
+  }, [placingLocation, placingAddress, settingLocation]);
+
+  const handleCancelPlacement = useCallback(() => {
+    setPlacingLocation(null);
+    setPlacingAddress('');
+    setSettingLocation(null);
+    setLocationInput('');
+    setError('');
+  }, []);
 
   const handleAccept = useCallback(() => {
     if (!pendingCustomer) return;
@@ -401,6 +432,8 @@ export default function Home() {
           driverLocation={driverLocation}
           startLocation={startLocation}
           endPoint={routeEnd}
+          onMapClick={settingLocation ? handleMapClick : undefined}
+          placingLocation={placingLocation}
           nextStopId={nextStopId}
           arrivedStopId={arrivedStopId}
           completedIds={completedIds}
@@ -507,7 +540,7 @@ export default function Home() {
                   <div className="border-t border-gray-700/50 my-1" />
                   {settingLocation === null ? (
                     <>
-                      <button onClick={() => setSettingLocation('start')}
+                      <button onClick={() => { setMenuOpen(false); setSettingLocation('start'); }}
                         className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3">
                         <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs shrink-0">🚩</span>
                         <span className="truncate">{routeStart ? routeStart.label : pt.setStart}</span>
@@ -516,7 +549,7 @@ export default function Home() {
                             className="ml-auto text-[10px] text-red-400 hover:text-red-300 shrink-0">{pt.clearStart}</span>
                         )}
                       </button>
-                      <button onClick={() => setSettingLocation('end')}
+                      <button onClick={() => { setMenuOpen(false); setSettingLocation('end'); }}
                         className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3">
                         <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs shrink-0">🏁</span>
                         <span className="truncate">{routeEnd ? routeEnd.label : pt.setEnd}</span>
@@ -633,6 +666,40 @@ export default function Home() {
               </svg>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ===== Placement Banner (z-[55], above sheet) ===== */}
+      {(settingLocation || placingLocation) && (
+        <div className="fixed z-[55] left-0 right-0 top-[calc(env(safe-area-inset-top,16px)+16px)] flex flex-col items-center px-4 pointer-events-none">
+          {settingLocation && !placingLocation && (
+            <div className="pointer-events-auto inline-flex items-center gap-3 bg-blue-900/90 backdrop-blur-md border border-blue-500/30 rounded-2xl px-5 py-3 shadow-2xl">
+              <span className="text-lg">{settingLocation === 'start' ? '🚩' : '🏁'}</span>
+              <p className="text-sm text-blue-100 font-medium whitespace-nowrap">{pt.tapMap}</p>
+              <button onClick={handleCancelPlacement}
+                className="text-xs text-blue-300 hover:text-blue-100 bg-blue-800/50 hover:bg-blue-700/50 rounded-lg px-3 py-1.5 transition-colors whitespace-nowrap">
+                {pt.cancel}
+              </button>
+            </div>
+          )}
+          {placingLocation && (
+            <div className="pointer-events-auto bg-gray-900/95 backdrop-blur-xl border border-blue-500/30 rounded-2xl px-5 py-3 shadow-2xl w-full max-w-sm">
+              <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-wider mb-1">
+                {settingLocation === 'start' ? pt.setStart : pt.setEnd}
+              </p>
+              <p className="text-sm text-gray-100 leading-relaxed mb-2">{placingAddress}</p>
+              <div className="flex gap-2">
+                <button onClick={handleConfirmPlacement}
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all active:scale-[0.97]">
+                  {pt.set}
+                </button>
+                <button onClick={handleCancelPlacement}
+                  className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-bold rounded-xl transition-all active:scale-[0.97]">
+                  {pt.cancel}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
