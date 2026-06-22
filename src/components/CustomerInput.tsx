@@ -63,7 +63,7 @@ export default function CustomerInput({ customers, onChange, onAdd, onFocus: onF
         setSuggestions([]);
         setShowSuggestions(false);
       }
-    } catch { /* ignore */ }
+    } catch { console.error('geocoding search failed'); }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

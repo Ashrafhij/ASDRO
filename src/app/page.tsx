@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Customer, Location, Waypoint, OptimizedRoute } from '@/lib/types';
-import { optimizeRoute, formatInstruction } from '@/lib/optimizer';
+import { optimizeRoute, formatInstruction, haversineDistance } from '@/lib/optimizer';
 import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
 import { useClipboardDetection } from '@/lib/useClipboardDetection';
@@ -25,10 +25,10 @@ export default function Home() {
 
   const load = <T,>(key: string, fallback: T): T => {
     if (typeof window === 'undefined') return fallback;
-    try { const v = localStorage.getItem('asdro-' + key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+    try { const v = localStorage.getItem('asdro-' + key); return v ? JSON.parse(v) : fallback; } catch { console.error('localStorage read failed', key); return fallback; }
   };
   const save = (key: string, val: unknown) => {
-    try { localStorage.setItem('asdro-' + key, JSON.stringify(val)); } catch { /* ignore */ }
+    try { localStorage.setItem('asdro-' + key, JSON.stringify(val)); } catch { console.error('localStorage write failed', key); }
   };
 
   const [customers, setCustomers] = useState<Customer[]>(() => load('customers', []));
@@ -107,7 +107,7 @@ export default function Home() {
     const raw = sessionStorage.getItem('asdro-share-location');
     if (raw) {
       sessionStorage.removeItem('asdro-share-location');
-      try { setShareLocation(JSON.parse(raw)); } catch { /* ignore */ }
+      try { setShareLocation(JSON.parse(raw)); } catch { console.error('failed to parse share location'); }
     }
   }, []);
 
@@ -164,7 +164,7 @@ export default function Home() {
       setLoading(true);
       optimizeRoute([...customers, named], driverLocation, locale)
         .then(result => setRoute(result))
-        .catch(() => {})
+        .catch(() => { console.error('optimize failed (accept)'); })
         .finally(() => setLoading(false));
     }
   }, [pendingCustomer, pendingStopName, customers, route, driverLocation, locale]);
@@ -212,27 +212,19 @@ export default function Home() {
     const sorted = [...route.waypoints].sort((a, b) => a.order - b.order);
     const nextStop = sorted.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
     if (!nextStop) return;
-    const R = 6371000;
-    const dLat = (nextStop.customer.location.lat - driverLocation.lat) * Math.PI / 180;
-    const dLng = (nextStop.customer.location.lng - driverLocation.lng) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(driverLocation.lat * Math.PI / 180) * Math.cos(nextStop.customer.location.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-    if (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) < 50) {
+    if (haversineDistance(driverLocation, nextStop.customer.location) * 1000 < 50) {
       setArrivedStop(nextStop);
       const snaps = getSnapPoints();
       snapTo(snaps.full);
       trackEventFireAndForget('arrived_at_stop');
-      try { navigator.vibrate?.(200); } catch {}
+      try { navigator.vibrate?.(200); } catch { console.error('vibrate failed'); }
     }
   }, [driverLocation, route, completedIds, skippedIds, arrivedStop]);
 
   // Auto-dismiss arrival when driver moves >100m away
   useEffect(() => {
     if (!arrivedStop || !driverLocation) return;
-    const R = 6371000;
-    const dLat = (arrivedStop.customer.location.lat - driverLocation.lat) * Math.PI / 180;
-    const dLng = (arrivedStop.customer.location.lng - driverLocation.lng) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(driverLocation.lat * Math.PI / 180) * Math.cos(arrivedStop.customer.location.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-    if (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) > 100) {
+    if (haversineDistance(driverLocation, arrivedStop.customer.location) * 1000 > 100) {
       setArrivedStop(null);
     }
   }, [driverLocation, arrivedStop]);
@@ -243,11 +235,7 @@ export default function Home() {
     const sorted = [...route.waypoints].sort((a, b) => a.order - b.order);
     const nextStop = sorted.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
     if (!nextStop) { setNextStopDistance(null); return; }
-    const R = 6371000;
-    const dLat = (nextStop.customer.location.lat - driverLocation.lat) * Math.PI / 180;
-    const dLng = (nextStop.customer.location.lng - driverLocation.lng) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(driverLocation.lat * Math.PI / 180) * Math.cos(nextStop.customer.location.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-    setNextStopDistance(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    setNextStopDistance(haversineDistance(driverLocation, nextStop.customer.location) * 1000);
   }, [driverLocation, route, completedIds, skippedIds]);
 
   const handleMarkComplete = useCallback(async (customerId: string) => {
@@ -262,7 +250,7 @@ export default function Home() {
     const remaining = customers.filter(c => remainingIds.has(c.id));
     const loc = customers.find(c => c.id === customerId)?.location || driverLocation;
     if (!loc) return;
-    try { setRoute(await optimizeRoute(remaining, loc, locale)); } catch { /* ok */ }
+    try { setRoute(await optimizeRoute(remaining, loc, locale)); } catch { console.error('optimize failed (mark complete)'); }
   }, [customers, completedIds, skippedIds, driverLocation, locale]);
 
   const handleSkip = useCallback(async (customerId: string) => {
@@ -276,7 +264,7 @@ export default function Home() {
     if (remainingIds.size === 0) return;
     const remaining = customers.filter(c => remainingIds.has(c.id));
     if (!driverLocation) return;
-    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { /* ok */ }
+    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { console.error('optimize failed (skip)'); }
   }, [customers, completedIds, skippedIds, driverLocation, locale]);
 
   const handleUnskip = useCallback(async (customerId: string) => {
@@ -288,7 +276,7 @@ export default function Home() {
     if (remainingIds.size === 0) return;
     const remaining = customers.filter(c => remainingIds.has(c.id));
     if (!driverLocation) return;
-    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { /* ok */ }
+    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { console.error('optimize failed (unskip)'); }
   }, [customers, completedIds, skippedIds, driverLocation, locale]);
 
   const handleUndoComplete = useCallback(async (customerId: string) => {
@@ -300,7 +288,7 @@ export default function Home() {
     if (remainingIds.size === 0) return;
     const remaining = customers.filter(c => remainingIds.has(c.id));
     if (!driverLocation) return;
-    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { /* ok */ }
+    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { console.error('optimize failed (undo complete)'); }
   }, [customers, completedIds, skippedIds, driverLocation, locale]);
 
   const handleArrivedDone = useCallback(() => {
@@ -386,7 +374,7 @@ export default function Home() {
           waypoints={route?.waypoints || []}
           customers={customers}
           driverLocation={driverLocation}
-          startLocation={!driverLocation ? startLocation : null}
+          startLocation={startLocation}
           nextStopId={nextStopId}
           arrivedStopId={arrivedStopId}
           completedIds={completedIds}
@@ -468,7 +456,7 @@ export default function Home() {
         <div className="flex flex-col gap-2">
           {/* Menu button */}
           <div className="relative">
-            <button onClick={() => setMenuOpen(!menuOpen)}
+            <button aria-label="Menu" onClick={() => setMenuOpen(!menuOpen)}
               className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
                 <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
@@ -476,7 +464,7 @@ export default function Home() {
             </button>
             {menuOpen && (
               <>
-                <div className="fixed inset-0" onClick={() => setMenuOpen(false)} style={{ zIndex: 45 }} />
+                <div role="presentation" className="fixed inset-0" onClick={() => setMenuOpen(false)} style={{ zIndex: 45 }} />
                 <div className="absolute bottom-full left-0 mb-2 z-50 w-52 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 p-2 space-y-1">
                   <button onClick={handleLocate} disabled={locating}
                     className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3 disabled:opacity-40">
@@ -503,7 +491,7 @@ export default function Home() {
 
           {/* Back button (nav mode) */}
           {navigationMode && (
-            <button onClick={() => setNavigationMode(false)}
+            <button aria-label="Exit navigation" onClick={() => setNavigationMode(false)}
               className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </button>
@@ -511,12 +499,12 @@ export default function Home() {
 
           {/* Bottom button: Sparkle (nav), or Locate + Follow (normal) */}
           {navigationMode ? (
-            <button className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90">
+            <button aria-label="Sparkle" className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
             </button>
           ) : (
             <>
-              <button onClick={() => {
+              <button aria-label="Locate" onClick={() => {
                   if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); setFollowDriver(true); }
                   else handleLocate();
                 }}
@@ -526,7 +514,7 @@ export default function Home() {
                 </svg>
               </button>
               {hasRoute && (
-                <button onClick={() => setFollowDriver(v => !v)}
+                <button aria-label={followDriver ? 'Auto follow on' : 'Auto follow off'} onClick={() => setFollowDriver(v => !v)}
                   className={`w-11 h-11 rounded-full shadow-2xl border flex items-center justify-center transition-all active:scale-90 ${followDriver ? 'bg-blue-600/80 border-blue-500/60' : 'bg-gray-900/80 border-gray-700/50 hover:bg-gray-800/90'}`}>
                   <svg viewBox="0 0 24 24" className={`w-5 h-5 ${followDriver ? 'fill-white' : 'fill-gray-400'}`}>
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
@@ -542,21 +530,21 @@ export default function Home() {
       {navigationMode && (
         <div className="fixed z-[60] right-4" style={{ bottom: 'calc(15vh + 80px)', opacity: btnOpacity, transition: 'opacity 0.15s ease-out', pointerEvents: btnOpacity > 0.05 ? 'auto' : 'none' }}>
           <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-1.5 shadow-2xl flex flex-col gap-px">
-            <button title="Re-center" onClick={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
+            <button aria-label="Re-center" title="Re-center" onClick={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
               className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center active:scale-90 transition-all">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white/80" style={{ transform: `rotate(${-(driverLocation?.heading || 0)}deg)` }}>
                 <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
               </svg>
             </button>
             <div className="mx-2.5 h-px bg-white/10" />
-            <button title="Search"
+            <button aria-label="Search" title="Search"
               className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center active:scale-90 transition-all">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white/80">
                 <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 0 0 9.5 3C6.08 3 3.28 5.64 3.03 9h2.02C5.3 6.75 7.18 5 9.5 5 11.99 5 14 7.01 14 9.5S11.99 14 9.5 14c-.17 0-.33-.03-.5-.05v2.02c.17.02.33.03.5.03 1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6-7C7.01 7 5 9.01 5 11.5S7.01 16 9.5 16 14 13.99 14 11.5 11.99 7 9.5 7z"/>
               </svg>
             </button>
             <div className="mx-2.5 h-px bg-white/10" />
-            <button title="Mute"
+            <button aria-label="Mute" title="Mute"
               className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center active:scale-90 transition-all">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white/80">
                 <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
@@ -564,7 +552,7 @@ export default function Home() {
               </svg>
             </button>
             <div className="mx-2.5 h-px bg-white/10" />
-            <button title="Report"
+            <button aria-label="Report" title="Report"
               className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center active:scale-90 transition-all">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-yellow-400">
                 <path d="M12 2L1 21h22L12 2zm0 3.83L18.28 19H5.72L12 5.83zM11 16h2v2h-2v-2zm0-6h2v4h-2v-4z"/>

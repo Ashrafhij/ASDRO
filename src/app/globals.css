@@ -30,7 +30,8 @@ body {
   animation: fade-in 120ms ease-out;
 }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overscroll-behavior: none; }
+body { overscroll-behavior: none; }
 
 /* Map stop tooltips — Google-style clean white bubble */
 .stop-tooltip {

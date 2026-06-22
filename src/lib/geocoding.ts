@@ -10,6 +10,7 @@ export async function geocodeAddress(address: string, locale?: string): Promise<
     if (!data || data.length === 0) return null;
     return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
   } catch {
+    console.error('reverseGeocode failed');
     return null;
   }
 }

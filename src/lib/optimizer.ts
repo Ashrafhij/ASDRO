@@ -6,7 +6,7 @@ function toRad(deg: number): number {
   return (deg * Math.PI) / 180;
 }
 
-function haversineDistance(a: Location, b: Location): number {
+export function haversineDistance(a: Location, b: Location): number {
   const R = 6371;
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
@@ -238,7 +238,7 @@ export async function optimizeRoute(
     waypoints.push({
       customer: cust,
       order: i + 1,
-      estimatedArrival: arrival.toLocaleTimeString('en-US', {
+      estimatedArrival: arrival.toLocaleTimeString(locale || 'en-US', {
         hour: '2-digit',
         minute: '2-digit'
       }),
