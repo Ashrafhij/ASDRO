@@ -373,6 +373,8 @@ export default function Home() {
       .catch(() => { setError(pt.gpsError); setLocating(false); });
   };
 
+  const btnOpacity = Math.min(1, Math.max(0, sheetTranslate / (getSnapPoints().half || 1)));
+
   return (
     <div className="h-screen relative overflow-hidden bg-gray-950" dir={dir}>
       {/* ===== Full-screen map ===== */}
@@ -459,8 +461,8 @@ export default function Home() {
         <div className="flex-1 relative pointer-events-none" />
       </div>
 
-      {/* ===== Bottom-left button stack (z-[60], above sheet) ===== */}
-      <div className="fixed z-[60] pointer-events-auto left-4" style={{ bottom: 'max(calc(15vh + 24px), 120px)' }}>
+      {/* ===== Bottom-left button stack (z-[60], above sheet, fades as sheet expands) ===== */}
+      <div className="fixed z-[60] left-4" style={{ bottom: 'calc(15vh + 80px)', opacity: btnOpacity, transition: 'opacity 0.15s ease-out', pointerEvents: btnOpacity > 0.05 ? 'auto' : 'none' }}>
         <div className="flex flex-col gap-2">
           {/* Menu button */}
           <div className="relative">
@@ -534,9 +536,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ===== Floating action panel (nav mode, z-[60] above sheet) ===== */}
+      {/* ===== Floating action panel (nav mode, z-[60] above sheet, fades as sheet expands) ===== */}
       {navigationMode && (
-        <div className="fixed z-[60] pointer-events-auto right-4" style={{ bottom: 'max(calc(15vh + 20px), 120px)' }}>
+        <div className="fixed z-[60] right-4" style={{ bottom: 'calc(15vh + 80px)', opacity: btnOpacity, transition: 'opacity 0.15s ease-out', pointerEvents: btnOpacity > 0.05 ? 'auto' : 'none' }}>
           <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-1.5 shadow-2xl flex flex-col gap-px">
             <button title="Re-center" onClick={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
               className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center active:scale-90 transition-all">
