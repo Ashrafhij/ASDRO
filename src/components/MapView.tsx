@@ -15,6 +15,7 @@ interface MapViewProps {
   customers?: Customer[];
   driverLocation: Location | null;
   startLocation: Location | null;
+  startPoint?: { location: Location; label: string } | null;
   endPoint?: { location: Location; label: string } | null;
   height?: string;
   followDriver?: boolean;
@@ -92,7 +93,7 @@ function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, g
 }
 
 export default forwardRef<MapViewRef, MapViewProps>(function MapView({
-  waypoints, customers = [], driverLocation, startLocation, endPoint, height = '100%', followDriver, onManualPan, onMapClick,
+  waypoints, customers = [], driverLocation, startLocation, startPoint, endPoint, height = '100%', followDriver, onManualPan, onMapClick,
   nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, placingLocation, navigationMode,
 }, ref) {
   const { t } = useI18n();
@@ -159,10 +160,16 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       bounds.push([driverLocation.lat, driverLocation.lng]);
     }
 
-    if (startLocation && !driverLocation) {
+    if (startLocation && !driverLocation && !startPoint) {
       const icon = L.divIcon({ html: startIconHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
       L.marker([startLocation.lat, startLocation.lng], { icon }).addTo(group).bindPopup(`<b>${mt.startLocation}</b>`);
       bounds.push([startLocation.lat, startLocation.lng]);
+    }
+
+    if (startPoint) {
+      const icon = L.divIcon({ html: startIconHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
+      L.marker([startPoint.location.lat, startPoint.location.lng], { icon, zIndexOffset: 200 }).addTo(group).bindPopup(`<b>${startPoint.label || 'Start'}</b>`);
+      bounds.push([startPoint.location.lat, startPoint.location.lng]);
     }
 
     if (endPoint) {
@@ -287,7 +294,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     if (bounds.length > 0 && !followDriver && !manualPanRef.current) {
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
     }
-  }, [waypoints, customers, startLocation, endPoint, mt, followDriver, nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, placingLocation]);
+  }, [waypoints, customers, startLocation, startPoint, endPoint, mt, followDriver, nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, placingLocation]);
 
   // Reset manualPan when entering follow mode
   useEffect(() => {

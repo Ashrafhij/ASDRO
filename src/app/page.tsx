@@ -431,6 +431,7 @@ export default function Home() {
           customers={customers}
           driverLocation={driverLocation}
           startLocation={startLocation}
+          startPoint={routeStart}
           endPoint={routeEnd}
           onMapClick={settingLocation ? handleMapClick : undefined}
           placingLocation={placingLocation}
