@@ -414,7 +414,7 @@ export default function Home() {
           {/* 2. Navigation Instruction Card */}
           {navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
             <div className="relative pointer-events-auto">
-              <div className="bg-[#0f5156] rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl">
+              <div className="bg-[#0f5156]/95 backdrop-blur-md border border-emerald-700/30 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl shadow-emerald-900/30">
                 <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0"
                   dangerouslySetInnerHTML={{ __html: turnArrowSvg(28, activeWaypoint.steps?.[0]?.type || '', activeWaypoint.steps?.[0]?.modifier) }} />
                 <div className="flex-1 min-w-0">
@@ -534,32 +534,39 @@ export default function Home() {
         <div className="flex-1 relative pointer-events-none" />
       </div>
 
-      {/* ===== Floating action buttons (nav mode, z-[60] above sheet) ===== */}
+      {/* ===== Floating action panel (nav mode, z-[60] above sheet) ===== */}
       {navigationMode && (
-        <div className="fixed z-[60] pointer-events-auto flex flex-col items-center gap-3" style={{ bottom: 'calc(15vh + 20px)', right: '16px' }}>
-          <button onClick={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
-            className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center active:scale-90 transition-all">
-            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-gray-700" style={{ transform: `rotate(${-(driverLocation?.heading || 0)}deg)` }}>
-              <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
-            </svg>
-          </button>
-          <button className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center active:scale-90 transition-all">
-            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-gray-700">
-              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 0 0 9.5 3C6.08 3 3.28 5.64 3.03 9h2.02C5.3 6.75 7.18 5 9.5 5 11.99 5 14 7.01 14 9.5S11.99 14 9.5 14c-.17 0-.33-.03-.5-.05v2.02c.17.02.33.03.5.03 1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6-7C7.01 7 5 9.01 5 11.5S7.01 16 9.5 16 14 13.99 14 11.5 11.99 7 9.5 7z"/>
-            </svg>
-          </button>
-          <button className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center active:scale-90 transition-all">
-            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-gray-700">
-              <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
-              <line x1="4" y1="4" x2="20" y2="20" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 shadow-md active:scale-95 transition-all">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-yellow-500 shrink-0">
-              <path d="M12 2L1 21h22L12 2zm0 3.83L18.28 19H5.72L12 5.83zM11 16h2v2h-2v-2zm0-6h2v4h-2v-4z"/>
-            </svg>
-            <span className="text-xs font-semibold text-gray-700">Report</span>
-          </button>
+        <div className="fixed z-[60] pointer-events-auto right-4" style={{ bottom: 'max(calc(15vh + 20px), 120px)' }}>
+          <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-1.5 shadow-2xl flex flex-col gap-px">
+            <button title="Re-center" onClick={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
+              className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center active:scale-90 transition-all">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white/80" style={{ transform: `rotate(${-(driverLocation?.heading || 0)}deg)` }}>
+                <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+              </svg>
+            </button>
+            <div className="mx-2.5 h-px bg-white/10" />
+            <button title="Search"
+              className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center active:scale-90 transition-all">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white/80">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 0 0 9.5 3C6.08 3 3.28 5.64 3.03 9h2.02C5.3 6.75 7.18 5 9.5 5 11.99 5 14 7.01 14 9.5S11.99 14 9.5 14c-.17 0-.33-.03-.5-.05v2.02c.17.02.33.03.5.03 1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6-7C7.01 7 5 9.01 5 11.5S7.01 16 9.5 16 14 13.99 14 11.5 11.99 7 9.5 7z"/>
+              </svg>
+            </button>
+            <div className="mx-2.5 h-px bg-white/10" />
+            <button title="Mute"
+              className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center active:scale-90 transition-all">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white/80">
+                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                <line x1="4" y1="4" x2="20" y2="20" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <div className="mx-2.5 h-px bg-white/10" />
+            <button title="Report"
+              className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center active:scale-90 transition-all">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-yellow-400">
+                <path d="M12 2L1 21h22L12 2zm0 3.83L18.28 19H5.72L12 5.83zM11 16h2v2h-2v-2zm0-6h2v4h-2v-4z"/>
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 
