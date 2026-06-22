@@ -404,89 +404,14 @@ export default function Home() {
         {/* ===== Top Safe Zone ===== */}
         <div className="flex flex-col gap-2 p-4 pt-[max(env(safe-area-inset-top,16px),16px)]">
 
-          {/* 1. Top Control Bar — always at the very top, never pushed down */}
-          <div className="flex items-center justify-between pointer-events-auto">
-            {/* Start edge: Menu + Back (nav mode) */}
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <button onClick={() => setMenuOpen(!menuOpen)}
-                  className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-                  </svg>
-                </button>
-                {menuOpen && (
-                  <>
-                    <div className="fixed inset-0" onClick={() => setMenuOpen(false)} style={{ zIndex: 45 }} />
-                    <div className="absolute top-12 left-0 z-50 w-52 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 p-2 space-y-1">
-                      <button onClick={handleLocate} disabled={locating}
-                        className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3 disabled:opacity-40">
-                        <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">
-                          {driverLocation ? '✅' : '📍'}
-                        </span>
-                        {locating ? pt.locating : driverLocation ? pt.located : pt.locateMe}
-                      </button>
-                      <div className="border-t border-gray-700/50 my-1" />
-                      <div className="px-3 py-2">
-                        <p className="text-[11px] text-gray-500 font-medium mb-1.5">{pt.language}</p>
-                        <LanguageSwitcher onSelect={() => setMenuOpen(false)} />
-                      </div>
-                      <div className="border-t border-gray-700/50 my-1" />
-                      <button onClick={handleClear}
-                        className="w-full py-2.5 px-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-3">
-                        <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">🗑️</span>
-                        {pt.clearAll}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-              {navigationMode && (
-                <button onClick={() => setNavigationMode(false)}
-                  className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-                </button>
-              )}
-            </div>
-
-            {/* End edge: Sparkle (nav mode) or Locate + Follow (normal mode) */}
-            <div className="flex items-center gap-2">
-              {navigationMode ? (
-                <button className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                </button>
-              ) : (
-                <>
-                  <button onClick={() => {
-                      if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); setFollowDriver(true); }
-                      else handleLocate();
-                    }}
-                    className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                  </button>
-                  {hasRoute && (
-                    <button onClick={() => setFollowDriver(v => !v)}
-                      className={`w-11 h-11 rounded-full shadow-2xl border flex items-center justify-center transition-all active:scale-90 ${followDriver ? 'bg-blue-600/80 border-blue-500/60' : 'bg-gray-900/80 border-gray-700/50 hover:bg-gray-800/90'}`}>
-                      <svg viewBox="0 0 24 24" className={`w-5 h-5 ${followDriver ? 'fill-white' : 'fill-gray-400'}`}>
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                      </svg>
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* 2. Offline Banner (pushes nav/clipboard down, never overlaps buttons) */}
+          {/* Offline Banner */}
           {!isOnline && (
             <div className="pointer-events-auto bg-yellow-600/90 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center text-sm font-semibold text-yellow-50 shadow-lg flex items-center justify-center gap-2">
               <span>⚠️</span> {t.detection.offlineMode}
             </div>
           )}
 
-          {/* 3. Navigation Instruction Card */}
+          {/* Navigation Instruction Card */}
           {navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
             <div className="relative pointer-events-auto">
               <div className="bg-[#0f5156]/95 backdrop-blur-md border border-emerald-700/30 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl shadow-emerald-900/30">
@@ -516,7 +441,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* 4. Clipboard Banner */}
+          {/* Clipboard Banner */}
           {pendingLocation && (
             <div className="pointer-events-auto">
               <ClipboardBanner
@@ -532,6 +457,81 @@ export default function Home() {
 
         {/* ===== Middle Safe Zone (flex-1, action buttons at bottom-right) ===== */}
         <div className="flex-1 relative pointer-events-none" />
+      </div>
+
+      {/* ===== Bottom-left button stack (z-[60], above sheet) ===== */}
+      <div className="fixed z-[60] pointer-events-auto left-4" style={{ bottom: 'max(calc(15vh + 24px), 120px)' }}>
+        <div className="flex flex-col gap-2">
+          {/* Menu button */}
+          <div className="relative">
+            <button onClick={() => setMenuOpen(!menuOpen)}
+              className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+              </svg>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0" onClick={() => setMenuOpen(false)} style={{ zIndex: 45 }} />
+                <div className="absolute bottom-full left-0 mb-2 z-50 w-52 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 p-2 space-y-1">
+                  <button onClick={handleLocate} disabled={locating}
+                    className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3 disabled:opacity-40">
+                    <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">
+                      {driverLocation ? '✅' : '📍'}
+                    </span>
+                    {locating ? pt.locating : driverLocation ? pt.located : pt.locateMe}
+                  </button>
+                  <div className="border-t border-gray-700/50 my-1" />
+                  <div className="px-3 py-2">
+                    <p className="text-[11px] text-gray-500 font-medium mb-1.5">{pt.language}</p>
+                    <LanguageSwitcher onSelect={() => setMenuOpen(false)} />
+                  </div>
+                  <div className="border-t border-gray-700/50 my-1" />
+                  <button onClick={handleClear}
+                    className="w-full py-2.5 px-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">🗑️</span>
+                    {pt.clearAll}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Back button (nav mode) */}
+          {navigationMode && (
+            <button onClick={() => setNavigationMode(false)}
+              className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+          )}
+
+          {/* Bottom button: Sparkle (nav), or Locate + Follow (normal) */}
+          {navigationMode ? (
+            <button className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            </button>
+          ) : (
+            <>
+              <button onClick={() => {
+                  if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); setFollowDriver(true); }
+                  else handleLocate();
+                }}
+                className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+              </button>
+              {hasRoute && (
+                <button onClick={() => setFollowDriver(v => !v)}
+                  className={`w-11 h-11 rounded-full shadow-2xl border flex items-center justify-center transition-all active:scale-90 ${followDriver ? 'bg-blue-600/80 border-blue-500/60' : 'bg-gray-900/80 border-gray-700/50 hover:bg-gray-800/90'}`}>
+                  <svg viewBox="0 0 24 24" className={`w-5 h-5 ${followDriver ? 'fill-white' : 'fill-gray-400'}`}>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                  </svg>
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* ===== Floating action panel (nav mode, z-[60] above sheet) ===== */}

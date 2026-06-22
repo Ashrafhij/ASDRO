@@ -130,14 +130,10 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     const m = mapRef.current;
     if (!m) return;
     const handler = () => { manualPanRef.current = true; onManualPan?.(); };
-    const clickHandler = (e: L.LeafletMouseEvent) => {
-      window.open(`https://www.google.com/maps?q=${e.latlng.lat},${e.latlng.lng}&layer=c`, '_blank');
-    };
     m.on('dragstart', handler);
     m.on('zoomstart', handler);
     m.on('wheel', handler);
-    m.on('click', clickHandler);
-    return () => { m.off('dragstart', handler); m.off('zoomstart', handler); m.off('wheel', handler); m.off('click', clickHandler); };
+    return () => { m.off('dragstart', handler); m.off('zoomstart', handler); m.off('wheel', handler); };
   }, [onManualPan]);
 
   // Render stops (either route waypoints or pre-route customer markers) + polylines + fit bounds
