@@ -7,6 +7,7 @@ import { optimizeRoute, formatInstruction, haversineDistance } from '@/lib/optim
 import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
 import { useClipboardDetection } from '@/lib/useClipboardDetection';
+import { useWakeLock } from '@/lib/useWakeLock';
 import { reverseGeocode, parseWhatsAppLocation } from '@/lib/geocoding';
 import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
@@ -50,6 +51,7 @@ export default function Home() {
   const [followDriver, setFollowDriver] = useState(true);
   const [navigationMode, setNavigationMode] = useState(false);
   const [nextStopDistance, setNextStopDistance] = useState<number | null>(null);
+  useWakeLock(navigationMode);
   const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
   const getSnapPoints = () => {
     const h = typeof window !== 'undefined' ? window.innerHeight : 1000;

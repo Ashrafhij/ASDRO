@@ -48,18 +48,25 @@ export function formatInstruction(step: { maneuver: { type: string; modifier?: s
   const dir = dirs[mod] || mod;
 
   const t = locale === 'he'
-    ? { turn: 'פנה', onto: 'ל', cont: 'המשך', on: 'ב', round: 'היכנס לכיכר', at: 'ב', merge: 'השתלב', keep: 'הישאר', ontoAlt: 'ל' }
+    ? { turn: 'פנה', onto: 'ל', cont: 'המשך', on: 'ב', round: 'היכנס לכיכר', at: 'ב', merge: 'השתלב', keep: 'הישאר', ontoAlt: 'ל', newName: 'המשך', ramp: 'צא', notify: 'שים לב', exit: 'צא מהכיכר', waypoint: 'נקודת ציון' }
     : locale === 'ar'
-    ? { turn: 'انعطف', onto: 'إلى', cont: 'تابع', on: 'في', round: 'ادخل الدوار', at: 'في', merge: 'اندمج', keep: 'ابق', ontoAlt: 'إلى' }
-    : { turn: 'Turn', onto: ' onto', cont: 'Continue', on: ' on', round: 'Enter roundabout', at: ' at', merge: 'Merge', keep: 'Keep', ontoAlt: ' onto' };
+    ? { turn: 'انعطف', onto: 'إلى', cont: 'تابع', on: 'في', round: 'ادخل الدوار', at: 'في', merge: 'اندمج', keep: 'ابق', ontoAlt: 'إلى', newName: 'تابع', ramp: 'اسلك المنحدر', notify: 'تنبيه', exit: 'اخرج من الدوار', waypoint: 'نقطة الطريق' }
+    : { turn: 'Turn', onto: ' onto', cont: 'Continue', on: ' on', round: 'Enter roundabout', at: ' at', merge: 'Merge', keep: 'Keep', ontoAlt: ' onto', newName: 'Continue', ramp: 'Take the ramp', notify: 'Note', exit: 'Exit roundabout', waypoint: 'Waypoint' };
 
   if (type === 'turn' || type === 'end of road') return `${t.turn} ${dir}${t.onto}${name ? ` ${name}` : ''}`;
   if (type === 'continue') return `${t.cont}${name ? `${t.on} ${name}` : ''}`;
   if (type === 'roundabout' || type === 'rotary') return `${t.round}${name ? `${t.at} ${name}` : ''}`;
-  if (type === 'merge') return `${t.merge}${dir ? ` ${dir}` : ''}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
+  if (type === 'roundabout turn') return `${t.round} ${dir}${name ? ` ${t.at} ${name}` : ''}`;
+  if (type === 'exit roundabout' || type === 'exit rotary') return `${t.exit}${name ? ` ${t.at} ${name}` : ''}`;
+  if (type === 'merge' || type === 'on ramp') return `${t.merge}${dir ? ` ${dir}` : ''}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
+  if (type === 'off ramp') return `${t.ramp}${dir ? ` ${dir}` : ''}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
   if (type === 'fork') return `${t.keep} ${dir}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
+  if (type === 'new name') return `${t.newName}${name ? `${t.on} ${name}` : ''}`;
+  if (type === 'notification') return `${t.notify}${name ? `: ${name}` : ''}`;
+  if (type === 'waypoint') return `${t.waypoint}${name ? `: ${name}` : ''}`;
+  if (type === 'use lane') return dir ? `${t.cont} ${dir}` : '';
   const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
-  return `${typeLabel} ${dir}${name ? ` ${t.ontoAlt} ${name}` : ''}`;
+  return `${typeLabel}${dir ? ` ${dir}` : ''}${name ? `${t.onto ? ' ' + t.onto.trim() : ''} ${name}` : ''}`;
 }
 
 async function getOSRMRoute(start: Location, end: Location, locale?: string, retries = 2): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string; steps: TurnStep[] } | null> {
