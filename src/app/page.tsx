@@ -373,7 +373,7 @@ export default function Home() {
       .catch(() => { setError(pt.gpsError); setLocating(false); });
   };
 
-  const btnOpacity = Math.min(1, Math.max(0, sheetTranslate / (getSnapPoints().half || 1)));
+  const btnOpacity = Math.min(1, Math.max(0, 1 - (getSnapPoints().collapsed - sheetTranslate) / 50));
 
   return (
     <div className="h-screen relative overflow-hidden bg-gray-950" dir={dir}>
