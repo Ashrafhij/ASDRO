@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Customer, Location, Waypoint, OptimizedRoute } from '@/lib/types';
-import { optimizeRoute } from '@/lib/optimizer';
+import { optimizeRoute, formatInstruction } from '@/lib/optimizer';
 import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
 import { useClipboardDetection } from '@/lib/useClipboardDetection';
@@ -374,6 +374,8 @@ export default function Home() {
   };
 
   const btnOpacity = Math.min(1, Math.max(0, 1 - (getSnapPoints().collapsed - sheetTranslate) / 50));
+  const turnText = (s?: { type: string; modifier?: string; name?: string }) =>
+    s ? formatInstruction({ maneuver: { type: s.type, modifier: s.modifier }, name: s.name || '' }, locale) : '';
 
   return (
     <div className="h-screen relative overflow-hidden bg-gray-950" dir={dir}>
@@ -414,13 +416,13 @@ export default function Home() {
           )}
 
           {/* Navigation Instruction Card */}
-          {navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
+          {navigationMode && hasRoute && activeWaypoint && activeWaypoint.steps?.[0] && (
             <div className="relative pointer-events-auto">
               <div className="bg-[#0f5156]/95 backdrop-blur-md border border-emerald-700/30 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl shadow-emerald-900/30">
                 <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0"
-                  dangerouslySetInnerHTML={{ __html: turnArrowSvg(28, activeWaypoint.steps?.[0]?.type || '', activeWaypoint.steps?.[0]?.modifier) }} />
+                  dangerouslySetInnerHTML={{ __html: turnArrowSvg(28, activeWaypoint.steps[0].type, activeWaypoint.steps[0].modifier) }} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-semibold text-white leading-tight">{activeWaypoint.nextInstruction}</p>
+                  <p className="text-[15px] font-semibold text-white leading-tight">{turnText(activeWaypoint.steps[0])}</p>
                 </div>
                 {nextStopDistance !== null && nextStopDistance !== undefined && nextStopDistance > 0 && (
                   <div className="shrink-0 text-right">
@@ -437,7 +439,7 @@ export default function Home() {
                   <span className="text-[10px] text-white/60 font-semibold uppercase tracking-wide">Then</span>
                   <div className="w-4 h-4 flex items-center justify-center"
                     dangerouslySetInnerHTML={{ __html: turnArrowSvg(14, activeWaypoint.steps[1].type, activeWaypoint.steps[1].modifier) }} />
-                  <span className="text-[11px] text-white font-medium truncate max-w-[130px]">{activeWaypoint.steps[1].instruction}</span>
+                  <span className="text-[11px] text-white font-medium truncate max-w-[130px]">{turnText(activeWaypoint.steps[1])}</span>
                 </div>
               )}
             </div>
@@ -600,7 +602,7 @@ export default function Home() {
             </div>
 
             {/* Next-turn banner (non-nav mode, inside sheet so always visible when collapsed) */}
-            {!navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
+            {!navigationMode && hasRoute && activeWaypoint && activeWaypoint.steps?.[0] && (
               <div className="px-4 pb-2">
                 <div className="bg-gray-800/60 backdrop-blur-xl border border-blue-500/25 rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
@@ -610,7 +612,7 @@ export default function Home() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] text-blue-300 font-semibold uppercase tracking-wider">{pt.nextTurn}</p>
-                    <p className="text-sm text-gray-100 font-medium truncate">{activeWaypoint.nextInstruction}</p>
+                    <p className="text-sm text-gray-100 font-medium truncate">{turnText(activeWaypoint.steps[0])}</p>
                   </div>
                   {nextStopDistance !== null && (
                     <div className="text-right shrink-0">

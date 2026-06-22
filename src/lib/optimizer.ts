@@ -35,7 +35,7 @@ function decodePolyline(encoded: string): [number, number][] {
   return points;
 }
 
-function formatInstruction(step: { maneuver: { type: string; modifier?: string }; name: string }, locale?: string): string {
+export function formatInstruction(step: { maneuver: { type: string; modifier?: string }; name: string }, locale?: string): string {
   const type = step.maneuver.type;
   const mod = step.maneuver.modifier || '';
   const name = step.name || '';
