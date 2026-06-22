@@ -12,7 +12,6 @@ import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
 import ClipboardBanner from '@/components/ClipboardBanner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import DriverNavigationView from '@/components/DriverNavigationView';
 import type { MapViewRef } from '@/components/MapView';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { trackEventFireAndForget } from '@/lib/analytics';
@@ -399,155 +398,174 @@ export default function Home() {
         />
       </div>
 
-      {/* Standalone green instruction banner (navigation mode, top-most card at z-50) */}
-      {navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
-        <div className={`fixed inset-x-4 z-50 transition-all duration-300 ${!isOnline ? 'top-16' : 'top-4'}`}>
-          <div className="relative pointer-events-auto">
-            <div className="bg-[#0f5156] rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl">
-              <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0"
-                dangerouslySetInnerHTML={{ __html: turnArrowSvg(28, activeWaypoint.steps?.[0]?.type || '', activeWaypoint.steps?.[0]?.modifier) }} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-semibold text-white leading-tight">{activeWaypoint.nextInstruction}</p>
+      {/* ===== UI Safe Zone (z-40, sits between map and bottom sheet) ===== */}
+      <div className="absolute inset-0 z-40 pointer-events-none flex flex-col justify-between">
+
+        {/* ===== Top Safe Zone ===== */}
+        <div className="flex flex-col gap-2 p-4 pt-[max(env(safe-area-inset-top,16px),16px)]">
+
+          {/* 1. Offline Banner */}
+          {!isOnline && (
+            <div className="pointer-events-auto bg-yellow-600/90 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center text-sm font-semibold text-yellow-50 shadow-lg flex items-center justify-center gap-2">
+              <span>⚠️</span> {t.detection.offlineMode}
+            </div>
+          )}
+
+          {/* 2. Navigation Instruction Card */}
+          {navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
+            <div className="relative pointer-events-auto">
+              <div className="bg-[#0f5156] rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl">
+                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0"
+                  dangerouslySetInnerHTML={{ __html: turnArrowSvg(28, activeWaypoint.steps?.[0]?.type || '', activeWaypoint.steps?.[0]?.modifier) }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-semibold text-white leading-tight">{activeWaypoint.nextInstruction}</p>
+                </div>
+                {nextStopDistance !== null && nextStopDistance !== undefined && nextStopDistance > 0 && (
+                  <div className="shrink-0 text-right">
+                    <p className="text-[10px] text-white/50 uppercase tracking-wider">{pt.remaining}</p>
+                    <p className="text-xl font-bold text-white tabular-nums">
+                      {nextStopDistance >= 1000 ? `${(nextStopDistance / 1000).toFixed(1)}` : `${Math.round(nextStopDistance)}`}
+                    </p>
+                    <p className="text-[10px] text-white/50">{nextStopDistance >= 1000 ? 'km' : 'm'}</p>
+                  </div>
+                )}
               </div>
-              {nextStopDistance !== null && nextStopDistance !== undefined && nextStopDistance > 0 && (
-                <div className="shrink-0 text-right">
-                  <p className="text-[10px] text-white/50 uppercase tracking-wider">{pt.remaining}</p>
-                  <p className="text-xl font-bold text-white tabular-nums">
-                    {nextStopDistance >= 1000 ? `${(nextStopDistance / 1000).toFixed(1)}` : `${Math.round(nextStopDistance)}`}
-                  </p>
-                  <p className="text-[10px] text-white/50">{nextStopDistance >= 1000 ? 'km' : 'm'}</p>
+              {activeWaypoint.steps?.[1] && (
+                <div className="absolute -bottom-9 left-3 bg-[#0a3d40] rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg">
+                  <span className="text-[10px] text-white/60 font-semibold uppercase tracking-wide">Then</span>
+                  <div className="w-4 h-4 flex items-center justify-center"
+                    dangerouslySetInnerHTML={{ __html: turnArrowSvg(14, activeWaypoint.steps[1].type, activeWaypoint.steps[1].modifier) }} />
+                  <span className="text-[11px] text-white font-medium truncate max-w-[130px]">{activeWaypoint.steps[1].instruction}</span>
                 </div>
               )}
             </div>
-            {activeWaypoint.steps?.[1] && (
-              <div className="absolute -bottom-9 left-3 bg-[#0a3d40] rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg">
-                <span className="text-[10px] text-white/60 font-semibold uppercase tracking-wide">Then</span>
-                <div className="w-4 h-4 flex items-center justify-center"
-                  dangerouslySetInnerHTML={{ __html: turnArrowSvg(14, activeWaypoint.steps[1].type, activeWaypoint.steps[1].modifier) }} />
-                <span className="text-[11px] text-white font-medium truncate max-w-[130px]">{activeWaypoint.steps[1].instruction}</span>
+          )}
+
+          {/* 3. Clipboard Banner */}
+          {pendingLocation && (
+            <div className="pointer-events-auto">
+              <ClipboardBanner
+                location={pendingLocation.location}
+                address={pendingLocation.text}
+                source={locationSource}
+                onAdd={handleDetectedAdd}
+                onDismiss={() => { setShareLocation(null); dismissClip(); }}
+              />
+            </div>
+          )}
+
+          {/* 4. Top Control Bar (flex row, never overlaps thanks to flex-col above) */}
+          <div className="flex items-center justify-between pointer-events-auto">
+            {/* Start edge: Menu + Back (nav mode) */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <button onClick={() => setMenuOpen(!menuOpen)}
+                  className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                  </svg>
+                </button>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0" onClick={() => setMenuOpen(false)} style={{ zIndex: 45 }} />
+                    <div className="absolute top-12 left-0 z-50 w-52 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 p-2 space-y-1">
+                      <button onClick={handleLocate} disabled={locating}
+                        className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3 disabled:opacity-40">
+                        <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">
+                          {driverLocation ? '✅' : '📍'}
+                        </span>
+                        {locating ? pt.locating : driverLocation ? pt.located : pt.locateMe}
+                      </button>
+                      <div className="border-t border-gray-700/50 my-1" />
+                      <div className="px-3 py-2">
+                        <p className="text-[11px] text-gray-500 font-medium mb-1.5">{pt.language}</p>
+                        <LanguageSwitcher onSelect={() => setMenuOpen(false)} />
+                      </div>
+                      <div className="border-t border-gray-700/50 my-1" />
+                      <button onClick={handleClear}
+                        className="w-full py-2.5 px-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">🗑️</span>
+                        {pt.clearAll}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-            )}
+              {navigationMode && (
+                <button onClick={() => setNavigationMode(false)}
+                  className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                </button>
+              )}
+            </div>
+
+            {/* End edge: Sparkle (nav mode) or Locate + Follow (normal mode) */}
+            <div className="flex items-center gap-2">
+              {navigationMode ? (
+                <button className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => {
+                      if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); setFollowDriver(true); }
+                      else handleLocate();
+                    }}
+                    className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                  </button>
+                  {hasRoute && (
+                    <button onClick={() => setFollowDriver(v => !v)}
+                      className={`w-11 h-11 rounded-full shadow-2xl border flex items-center justify-center transition-all active:scale-90 ${followDriver ? 'bg-blue-600/80 border-blue-500/60' : 'bg-gray-900/80 border-gray-700/50 hover:bg-gray-800/90'}`}>
+                      <svg viewBox="0 0 24 24" className={`w-5 h-5 ${followDriver ? 'fill-white' : 'fill-gray-400'}`}>
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
-      )}
 
-      {/* DriverNavigationView overlay (buttons only — banner is rendered standalone above at z-50) */}
-      {navigationMode && hasRoute && activeWaypoint && (
-        <DriverNavigationView
-          heading={driverLocation?.heading}
-          isOnline={isOnline}
-          onCompass={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
-          onExit={() => setNavigationMode(false)}
-        />
-      )}
-      {/* Next-turn floating banner (hidden in nav mode) */}
-      {!navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none p-3 pb-[max(env(safe-area-inset-bottom),8px)]">
-          <div className="pointer-events-auto bg-gray-900/90 backdrop-blur-xl border border-blue-500/25 rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
-                <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] text-blue-300 font-semibold uppercase tracking-wider">{pt.nextTurn}</p>
-              <p className="text-sm text-gray-100 font-medium truncate">{activeWaypoint.nextInstruction}</p>
-            </div>
-            {nextStopDistance !== null && (
-              <div className="text-right shrink-0">
-                <p className="text-[10px] text-gray-400">{pt.remaining}</p>
-                <p className="text-sm text-gray-100 font-semibold tabular-nums">
-                  {nextStopDistance >= 1000
-                    ? `${(nextStopDistance / 1000).toFixed(1)} km`
-                    : `${Math.round(nextStopDistance)} m`}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ===== Corner menu button (top-left) ===== */}
-      <div className={`absolute left-12 z-40 transition-all ${navigationMode ? 'top-36' : isOnline ? 'top-4' : 'top-14'}`}>
-        <button onClick={() => setMenuOpen(!menuOpen)}
-          className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center text-white transition-all active:scale-90 hover:bg-gray-800/90">
-          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-          </svg>
-        </button>
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0" onClick={() => setMenuOpen(false)} style={{ zIndex: 15 }} />
-            <div className="absolute top-12 left-0 w-52 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 p-2 space-y-1" style={{ zIndex: 20 }}>
-              <button onClick={handleLocate} disabled={locating}
-                className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3 disabled:opacity-40">
-                <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">
-                  {driverLocation ? '✅' : '📍'}
-                </span>
-                {locating ? pt.locating : driverLocation ? pt.located : pt.locateMe}
-              </button>
-              <div className="border-t border-gray-700/50 my-1" />
-              <div className="px-3 py-2">
-                <p className="text-[11px] text-gray-500 font-medium mb-1.5">{pt.language}</p>
-                <LanguageSwitcher onSelect={() => setMenuOpen(false)} />
-              </div>
-              <div className="border-t border-gray-700/50 my-1" />
-              <button onClick={handleClear}
-                className="w-full py-2.5 px-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-3">
-                <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs">🗑️</span>
-                {pt.clearAll}
-              </button>
-            </div>
-          </>
-        )}
+        {/* ===== Middle Safe Zone (flex-1, action buttons at bottom-right) ===== */}
+        <div className="flex-1 relative pointer-events-none" />
       </div>
 
-      {/* ===== Locate button + Follow toggle (top-right) ===== */}
-      {!navigationMode && (
-      <div className={`absolute right-4 z-40 flex gap-2 transition-all ${isOnline ? 'top-4' : 'top-14'}`}>
-        <button onClick={() => {
-            if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setSheetTranslate(getCollapsedTranslate()); setFollowDriver(true); }
-            else handleLocate();
-          }}
-            className="w-11 h-11 bg-gray-900/80 backdrop-blur-xl rounded-full shadow-2xl border border-gray-700/50 flex items-center justify-center transition-all active:scale-90 hover:bg-gray-800/90">
-            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      {/* ===== Floating action buttons (nav mode, z-[60] above sheet) ===== */}
+      {navigationMode && (
+        <div className="fixed z-[60] pointer-events-auto flex flex-col items-center gap-3" style={{ bottom: 'calc(15vh + 20px)', right: '16px' }}>
+          <button onClick={() => { if (driverLocation) { mapRef.current?.recenter(driverLocation.lat, driverLocation.lng); setFollowDriver(true); } }}
+            className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center active:scale-90 transition-all">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-gray-700" style={{ transform: `rotate(${-(driverLocation?.heading || 0)}deg)` }}>
+              <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
             </svg>
           </button>
-        {hasRoute && (
-          <button onClick={() => setFollowDriver(v => !v)}
-            className={`w-11 h-11 rounded-full shadow-2xl border flex items-center justify-center transition-all active:scale-90 ${followDriver ? 'bg-blue-600/80 border-blue-500/60' : 'bg-gray-900/80 border-gray-700/50 hover:bg-gray-800/90'}`}>
-            <svg viewBox="0 0 24 24" className={`w-5 h-5 ${followDriver ? 'fill-white' : 'fill-gray-400'}`}>
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+          <button className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center active:scale-90 transition-all">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-gray-700">
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 0 0 9.5 3C6.08 3 3.28 5.64 3.03 9h2.02C5.3 6.75 7.18 5 9.5 5 11.99 5 14 7.01 14 9.5S11.99 14 9.5 14c-.17 0-.33-.03-.5-.05v2.02c.17.02.33.03.5.03 1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6-7C7.01 7 5 9.01 5 11.5S7.01 16 9.5 16 14 13.99 14 11.5 11.99 7 9.5 7z"/>
             </svg>
           </button>
-        )}
-        </div>
-      )}
-
-      {/* ===== Clipboard detection banner ===== */}
-      {pendingLocation && (
-        <div className="absolute top-16 left-4 right-4 z-20">
-          <ClipboardBanner
-            location={pendingLocation.location}
-            address={pendingLocation.text}
-            source={locationSource}
-            onAdd={handleDetectedAdd}
-            onDismiss={() => { setShareLocation(null); dismissClip(); }}
-          />
-        </div>
-      )}
-
-      {/* ===== Offline Banner ===== */}
-      {!isOnline && (
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-yellow-600/90 backdrop-blur-sm px-4 py-2.5 pt-[env(safe-area-inset-top)] text-center text-sm font-semibold text-yellow-50 shadow-lg flex items-center justify-center gap-2">
-          <span>⚠️</span> {t.detection.offlineMode}
+          <button className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center active:scale-90 transition-all">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-gray-700">
+              <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+              <line x1="4" y1="4" x2="20" y2="20" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 shadow-md active:scale-95 transition-all">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-yellow-500 shrink-0">
+              <path d="M12 2L1 21h22L12 2zm0 3.83L18.28 19H5.72L12 5.83zM11 16h2v2h-2v-2zm0-6h2v4h-2v-4z"/>
+            </svg>
+            <span className="text-xs font-semibold text-gray-700">Report</span>
+          </button>
         </div>
       )}
 
       {/* ===== Draggable Bottom Sheet ===== */}
         <div ref={sheetRef}
-          className="fixed bottom-0 left-0 right-0 z-10 bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50"
+          className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-gray-700/50"
           style={{
             height: '85dvh',
             transform: `translateY(${sheetTranslate}px)`,
@@ -572,7 +590,34 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Summary / Confirmation / Action buttons */}
+            {/* Next-turn banner (non-nav mode, inside sheet so always visible when collapsed) */}
+            {!navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
+              <div className="px-4 pb-2">
+                <div className="bg-gray-800/60 backdrop-blur-xl border border-blue-500/25 rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-400">
+                      <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-blue-300 font-semibold uppercase tracking-wider">{pt.nextTurn}</p>
+                    <p className="text-sm text-gray-100 font-medium truncate">{activeWaypoint.nextInstruction}</p>
+                  </div>
+                  {nextStopDistance !== null && (
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] text-gray-400">{pt.remaining}</p>
+                      <p className="text-sm text-gray-100 font-semibold tabular-nums">
+                        {nextStopDistance >= 1000
+                          ? `${(nextStopDistance / 1000).toFixed(1)} km`
+                          : `${Math.round(nextStopDistance)} m`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Summary / Confirmation / Arrival / Add Stop */}
             {pendingCustomer ? (
               <div className="px-4 pb-3 space-y-3">
                 <div className="bg-gray-800/50 border border-yellow-500/30 rounded-2xl p-4 space-y-3">
