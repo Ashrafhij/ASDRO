@@ -15,6 +15,7 @@ interface MapViewProps {
   customers?: Customer[];
   driverLocation: Location | null;
   startLocation: Location | null;
+  endPoint?: { location: Location; label: string } | null;
   height?: string;
   followDriver?: boolean;
   onManualPan?: () => void;
@@ -79,6 +80,7 @@ function driverIconHtml(heading?: number) {
 }
 
 const startIconHtml = `<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#d97706);border:3px solid #fff;box-shadow:0 0 16px rgba(251,191,36,0.45),0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#fff">S</div>`;
+const endIconHtml = `<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#f43f5e,#e11d48);border:3px solid #fff;box-shadow:0 0 16px rgba(244,63,94,0.45),0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#fff">E</div>`;
 
 function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, glow: string) {
   const ring = pulse ? `<div style="position:absolute;inset:-6px;border-radius:50%;background:${glow};animation:pulse-ring 2s infinite;z-index:1"></div>` : '';
@@ -88,7 +90,7 @@ function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, g
 }
 
 export default forwardRef<MapViewRef, MapViewProps>(function MapView({
-  waypoints, customers = [], driverLocation, startLocation, height = '100%', followDriver, onManualPan,
+  waypoints, customers = [], driverLocation, startLocation, endPoint, height = '100%', followDriver, onManualPan,
   nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, navigationMode,
 }, ref) {
   const { t } = useI18n();
@@ -157,6 +159,12 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       const icon = L.divIcon({ html: startIconHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
       L.marker([startLocation.lat, startLocation.lng], { icon }).addTo(group).bindPopup(`<b>${mt.startLocation}</b>`);
       bounds.push([startLocation.lat, startLocation.lng]);
+    }
+
+    if (endPoint) {
+      const icon = L.divIcon({ html: endIconHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
+      L.marker([endPoint.location.lat, endPoint.location.lng], { icon, zIndexOffset: 200 }).addTo(group).bindPopup(`<b>${endPoint.label || 'End'}</b>`);
+      bounds.push([endPoint.location.lat, endPoint.location.lng]);
     }
 
     if (pendingCustomer) {
@@ -266,7 +274,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
     if (bounds.length > 0 && !followDriver && !manualPanRef.current) {
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
     }
-  }, [waypoints, customers, startLocation, mt, followDriver, nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer]);
+  }, [waypoints, customers, startLocation, endPoint, mt, followDriver, nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer]);
 
   // Reset manualPan when entering follow mode
   useEffect(() => {

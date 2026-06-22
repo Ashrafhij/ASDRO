@@ -8,7 +8,7 @@ import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
 import { useClipboardDetection } from '@/lib/useClipboardDetection';
 import { useWakeLock } from '@/lib/useWakeLock';
-import { reverseGeocode, parseWhatsAppLocation } from '@/lib/geocoding';
+import { reverseGeocode, parseWhatsAppLocation, geocodeAddress } from '@/lib/geocoding';
 import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
 import ClipboardBanner from '@/components/ClipboardBanner';
@@ -51,6 +51,13 @@ export default function Home() {
   const [followDriver, setFollowDriver] = useState(true);
   const [navigationMode, setNavigationMode] = useState(false);
   const [nextStopDistance, setNextStopDistance] = useState<number | null>(null);
+  const [routeStart, setRouteStart] = useState<{ location: Location; label: string } | null>(() => load('routeStart', null));
+  const [routeEnd, setRouteEnd] = useState<{ location: Location; label: string } | null>(() => load('routeEnd', null));
+  const [settingLocation, setSettingLocation] = useState<'start' | 'end' | null>(null);
+  const [locationInput, setLocationInput] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
+  useEffect(() => { save('routeStart', routeStart); }, [routeStart]);
+  useEffect(() => { save('routeEnd', routeEnd); }, [routeEnd]);
   useWakeLock(navigationMode);
   const getCollapsedTranslate = () => (typeof window !== 'undefined' ? window.innerHeight * 0.85 - 180 : 500);
   const getSnapPoints = () => {
@@ -154,6 +161,21 @@ export default function Home() {
     setPendingCustomer(customer);
   }, []);
 
+  const handleSetLocation = useCallback(async () => {
+    const input = locationInput.trim();
+    if (!input || !settingLocation) return;
+    setLocationLoading(true);
+    const loc = await geocodeAddress(input, locale);
+    setLocationLoading(false);
+    if (!loc) { setError(pt.searchAddress); return; }
+    const entry = { location: loc, label: input };
+    if (settingLocation === 'start') setRouteStart(entry);
+    else setRouteEnd(entry);
+    setSettingLocation(null);
+    setLocationInput('');
+    setError('');
+  }, [locationInput, settingLocation, locale, pt]);
+
   const handleAccept = useCallback(() => {
     if (!pendingCustomer) return;
     const named = { ...pendingCustomer, name: pendingStopName || '' };
@@ -164,12 +186,12 @@ export default function Home() {
     trackEventFireAndForget('add_stop');
     if (route && driverLocation) {
       setLoading(true);
-      optimizeRoute([...customers, named], driverLocation, locale)
+      optimizeRoute([...customers, named], routeStart?.location || driverLocation, locale, routeEnd?.location)
         .then(result => setRoute(result))
         .catch(() => { console.error('optimize failed (accept)'); })
         .finally(() => setLoading(false));
     }
-  }, [pendingCustomer, pendingStopName, customers, route, driverLocation, locale]);
+  }, [pendingCustomer, pendingStopName, customers, route, driverLocation, locale, routeEnd, routeStart]);
 
   const handleCancel = useCallback(() => {
     setPendingCustomer(null);
@@ -201,12 +223,12 @@ export default function Home() {
     if (!startLocation && !driverLocation) { setError(pt.setStartingLocation); return; }
     setError(''); setLoading(true);
     try {
-      const result = await optimizeRoute(customers, driverLocation || startLocation!, locale);
+      const result = await optimizeRoute(customers, routeStart?.location || driverLocation || startLocation!, locale, routeEnd?.location);
       setRoute(result); setSheetTranslate(0);
       trackEventFireAndForget('optimize_route');
     } catch { setError(pt.optimizationFailed); }
     finally { setLoading(false); }
-  }, [customers, startLocation, driverLocation, locale, pt]);
+  }, [customers, startLocation, driverLocation, locale, pt, routeEnd, routeStart]);
 
   // Arrival detection — shows confirmation instead of auto-completing
   useEffect(() => {
@@ -252,8 +274,8 @@ export default function Home() {
     const remaining = customers.filter(c => remainingIds.has(c.id));
     const loc = customers.find(c => c.id === customerId)?.location || driverLocation;
     if (!loc) return;
-    try { setRoute(await optimizeRoute(remaining, loc, locale)); } catch { console.error('optimize failed (mark complete)'); }
-  }, [customers, completedIds, skippedIds, driverLocation, locale]);
+    try { setRoute(await optimizeRoute(remaining, loc, locale, routeEnd?.location)); } catch { console.error('optimize failed (mark complete)'); }
+  }, [customers, completedIds, skippedIds, driverLocation, locale, routeEnd, routeStart]);
 
   const handleSkip = useCallback(async (customerId: string) => {
     const newSkipped = new Set(skippedIds); newSkipped.add(customerId);
@@ -266,8 +288,8 @@ export default function Home() {
     if (remainingIds.size === 0) return;
     const remaining = customers.filter(c => remainingIds.has(c.id));
     if (!driverLocation) return;
-    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { console.error('optimize failed (skip)'); }
-  }, [customers, completedIds, skippedIds, driverLocation, locale]);
+    try { setRoute(await optimizeRoute(remaining, driverLocation, locale, routeEnd?.location)); } catch { console.error('optimize failed (skip)'); }
+  }, [customers, completedIds, skippedIds, driverLocation, locale, routeEnd, routeStart]);
 
   const handleUnskip = useCallback(async (customerId: string) => {
     const newSkipped = new Set(skippedIds); newSkipped.delete(customerId);
@@ -278,8 +300,8 @@ export default function Home() {
     if (remainingIds.size === 0) return;
     const remaining = customers.filter(c => remainingIds.has(c.id));
     if (!driverLocation) return;
-    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { console.error('optimize failed (unskip)'); }
-  }, [customers, completedIds, skippedIds, driverLocation, locale]);
+    try { setRoute(await optimizeRoute(remaining, driverLocation, locale, routeEnd?.location)); } catch { console.error('optimize failed (unskip)'); }
+  }, [customers, completedIds, skippedIds, driverLocation, locale, routeEnd, routeStart]);
 
   const handleUndoComplete = useCallback(async (customerId: string) => {
     const newCompleted = new Set(completedIds); newCompleted.delete(customerId);
@@ -290,8 +312,8 @@ export default function Home() {
     if (remainingIds.size === 0) return;
     const remaining = customers.filter(c => remainingIds.has(c.id));
     if (!driverLocation) return;
-    try { setRoute(await optimizeRoute(remaining, driverLocation, locale)); } catch { console.error('optimize failed (undo complete)'); }
-  }, [customers, completedIds, skippedIds, driverLocation, locale]);
+    try { setRoute(await optimizeRoute(remaining, driverLocation, locale, routeEnd?.location)); } catch { console.error('optimize failed (undo complete)'); }
+  }, [customers, completedIds, skippedIds, driverLocation, locale, routeEnd, routeStart]);
 
   const handleArrivedDone = useCallback(() => {
     if (!arrivedStop) return;
@@ -310,6 +332,7 @@ export default function Home() {
   const handleClear = () => {
     setCustomers([]); setRoute(null); setCompletedIds(new Set());
     setSkippedIds(new Set()); setError('');
+    setRouteStart(null); setRouteEnd(null);
     setMenuOpen(false);
     setArrivedStop(null);
     trackEventFireAndForget('clear_all');
@@ -377,6 +400,7 @@ export default function Home() {
           customers={customers}
           driverLocation={driverLocation}
           startLocation={startLocation}
+          endPoint={routeEnd}
           nextStopId={nextStopId}
           arrivedStopId={arrivedStopId}
           completedIds={completedIds}
@@ -480,6 +504,54 @@ export default function Home() {
                     <p className="text-[11px] text-gray-500 font-medium mb-1.5">{pt.language}</p>
                     <LanguageSwitcher onSelect={() => setMenuOpen(false)} />
                   </div>
+                  <div className="border-t border-gray-700/50 my-1" />
+                  {settingLocation === null ? (
+                    <>
+                      <button onClick={() => setSettingLocation('start')}
+                        className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs shrink-0">🚩</span>
+                        <span className="truncate">{routeStart ? routeStart.label : pt.setStart}</span>
+                        {routeStart && (
+                          <span onClick={(e) => { e.stopPropagation(); setRouteStart(null); }}
+                            className="ml-auto text-[10px] text-red-400 hover:text-red-300 shrink-0">{pt.clearStart}</span>
+                        )}
+                      </button>
+                      <button onClick={() => setSettingLocation('end')}
+                        className="w-full py-2.5 px-3 text-sm text-gray-200 hover:bg-white/10 rounded-xl transition-all flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-xs shrink-0">🏁</span>
+                        <span className="truncate">{routeEnd ? routeEnd.label : pt.setEnd}</span>
+                        {routeEnd && (
+                          <span onClick={(e) => { e.stopPropagation(); setRouteEnd(null); }}
+                            className="ml-auto text-[10px] text-red-400 hover:text-red-300 shrink-0">{pt.clearEnd}</span>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="p-2 space-y-2">
+                      <input autoFocus
+                        value={locationInput}
+                        onChange={(e) => setLocationInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && locationInput.trim()) handleSetLocation(); }}
+                        placeholder={pt.searchAddress}
+                        className="w-full text-sm bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white placeholder-gray-500 outline-none focus:border-gray-500" />
+                      <div className="flex gap-2">
+                        <button onClick={handleSetLocation} disabled={!locationInput.trim() || locationLoading}
+                          className="flex-1 py-2 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-40 rounded-xl text-white font-medium transition-colors">
+                          {locationLoading ? '...' : pt.set}
+                        </button>
+                        <button onClick={() => { setSettingLocation(null); setLocationInput(''); }}
+                          className="flex-1 py-2 text-sm bg-gray-800 hover:bg-gray-700 rounded-xl text-gray-300 font-medium transition-colors">
+                          {pt.cancel}
+                        </button>
+                        {settingLocation === 'start' && (
+                          <button onClick={() => { setRouteStart(null); setSettingLocation(null); setLocationInput(''); }}
+                            className="flex-1 py-2 text-sm bg-gray-800 hover:bg-gray-700 rounded-xl text-gray-300 font-medium transition-colors">
+                            {pt.useGps}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div className="border-t border-gray-700/50 my-1" />
                   <button onClick={handleClear}
                     className="w-full py-2.5 px-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-3">
@@ -701,6 +773,12 @@ export default function Home() {
                     </span>
                   </div>
                 </div>
+                {routeEnd && (
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-400 pb-1">
+                    <span>🏁</span>
+                    <span className="truncate max-w-[200px]">{routeEnd.label}</span>
+                  </div>
+                )}
                 {/* Navigate + Reoptimize buttons */}
                 <div className="flex gap-2">
                   <button onClick={optimize} disabled={loading || !isOnline}

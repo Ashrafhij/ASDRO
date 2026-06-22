@@ -165,14 +165,15 @@ function nearestNeighborTSP(
   return route;
 }
 
-function twoOptImprovement(route: number[], distances: number[][]): number[] {
+function twoOptImprovement(route: number[], distances: number[][], endIdx?: number): number[] {
   let improved = true;
   let best = route;
+  const limit = endIdx !== undefined ? best.length - 2 : best.length - 1;
 
   while (improved) {
     improved = false;
-    for (let i = 1; i < best.length - 1; i++) {
-      for (let j = i + 1; j < best.length; j++) {
+    for (let i = 1; i < limit; i++) {
+      for (let j = i + 1; j <= limit; j++) {
         const newRoute = [
           ...best.slice(0, i),
           ...best.slice(i, j + 1).reverse(),
@@ -202,20 +203,24 @@ function totalDistance(route: number[], distances: number[][]): number {
 export async function optimizeRoute(
   customers: Customer[],
   startLocation: Location,
-  locale?: string
+  locale?: string,
+  endLocation?: Location
 ): Promise<OptimizedRoute> {
   if (customers.length === 0) {
     return { waypoints: [], totalDistance: 0, totalDuration: 0 };
   }
 
   // Step 1: Use haversine (no API calls) for TSP ordering
-  const points = [startLocation, ...customers.map(c => c.location)];
+  const hasEnd = !!endLocation;
+  const points = [startLocation, ...customers.map(c => c.location), ...(hasEnd ? [endLocation!] : [])];
   const { distances } = buildHaversineMatrix(points);
+  const endIdx = hasEnd ? customers.length + 1 : undefined;
 
   const available = new Set(Array.from({ length: customers.length }, (_, i) => i + 1));
   const rawRoute = nearestNeighborTSP(distances, 0, available);
-  const improvedRoute = twoOptImprovement(rawRoute, distances);
-  const finalCustomers = improvedRoute.filter(i => i !== 0).map(i => i - 1);
+  if (hasEnd) rawRoute.push(endIdx!);
+  const improvedRoute = twoOptImprovement(rawRoute, distances, endIdx);
+  const finalCustomers = improvedRoute.filter(i => i !== 0 && i !== endIdx).map(i => i - 1);
 
   // Step 2: Get road geometry per leg via OSRM (N calls, not N²)
   const waypoints: Waypoint[] = [];
@@ -254,6 +259,27 @@ export async function optimizeRoute(
       legGeometry,
       nextInstruction,
       steps,
+    });
+  }
+
+  // Step 3: Add final leg to end location if provided
+  if (hasEnd && finalCustomers.length > 0) {
+    const lastCust = customers[finalCustomers[finalCustomers.length - 1]];
+    const osrm = await getOSRMRoute(lastCust.location, endLocation!, locale);
+    const dist = osrm ? osrm.distance : haversineDistance(lastCust.location, endLocation!);
+    const dur = osrm ? osrm.duration : (dist / 40) * 60;
+    totalDist += dist;
+    totalDur += dur;
+
+    waypoints.push({
+      customer: { id: 'end', name: '', phone: '', notes: '', location: endLocation!, address: '' },
+      order: finalCustomers.length + 1,
+      estimatedArrival: '',
+      distanceFromPrevious: parseFloat(dist.toFixed(1)),
+      timeFromPrevious: parseFloat(dur.toFixed(1)),
+      legGeometry: osrm?.geometry,
+      nextInstruction: osrm?.instruction,
+      steps: osrm?.steps,
     });
   }
 
