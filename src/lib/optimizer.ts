@@ -48,9 +48,9 @@ export function formatInstruction(step: { maneuver: { type: string; modifier?: s
   const dir = dirs[mod] || mod;
 
   const t = locale === 'he'
-    ? { turn: 'פנה', onto: 'ל', cont: 'המשך', on: 'ב', round: 'היכנס לכיכר', at: 'ב', merge: 'השתלב', keep: 'הישאר', ontoAlt: 'ל', newName: 'המשך', ramp: 'צא', notify: 'שים לב', exit: 'צא מהכיכר', waypoint: 'נקודת ציון' }
+    ? { turn: 'פנה', onto: ' ל', cont: 'המשך', on: 'ב', round: 'היכנס לכיכר', at: 'ב', merge: 'השתלב', keep: 'הישאר', ontoAlt: 'ל', newName: 'המשך', ramp: 'צא', notify: 'שים לב', exit: 'צא מהכיכר', waypoint: 'נקודת ציון' }
     : locale === 'ar'
-    ? { turn: 'انعطف', onto: 'إلى', cont: 'تابع', on: 'في', round: 'ادخل الدوار', at: 'في', merge: 'اندمج', keep: 'ابق', ontoAlt: 'إلى', newName: 'تابع', ramp: 'اسلك المنحدر', notify: 'تنبيه', exit: 'اخرج من الدوار', waypoint: 'نقطة الطريق' }
+    ? { turn: 'انعطف', onto: ' إلى', cont: 'تابع', on: 'في', round: 'ادخل الدوار', at: 'في', merge: 'اندمج', keep: 'ابق', ontoAlt: 'إلى', newName: 'تابع', ramp: 'اسلك المنحدر', notify: 'تنبيه', exit: 'اخرج من الدوار', waypoint: 'نقطة الطريق' }
     : { turn: 'Turn', onto: ' onto', cont: 'Continue', on: ' on', round: 'Enter roundabout', at: ' at', merge: 'Merge', keep: 'Keep', ontoAlt: ' onto', newName: 'Continue', ramp: 'Take the ramp', notify: 'Note', exit: 'Exit roundabout', waypoint: 'Waypoint' };
 
   if (type === 'turn' || type === 'end of road') return `${t.turn} ${dir}${t.onto}${name ? ` ${name}` : ''}`;
