@@ -404,57 +404,7 @@ export default function Home() {
         {/* ===== Top Safe Zone ===== */}
         <div className="flex flex-col gap-2 p-4 pt-[max(env(safe-area-inset-top,16px),16px)]">
 
-          {/* 1. Offline Banner */}
-          {!isOnline && (
-            <div className="pointer-events-auto bg-yellow-600/90 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center text-sm font-semibold text-yellow-50 shadow-lg flex items-center justify-center gap-2">
-              <span>⚠️</span> {t.detection.offlineMode}
-            </div>
-          )}
-
-          {/* 2. Navigation Instruction Card */}
-          {navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
-            <div className="relative pointer-events-auto">
-              <div className="bg-[#0f5156]/95 backdrop-blur-md border border-emerald-700/30 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl shadow-emerald-900/30">
-                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0"
-                  dangerouslySetInnerHTML={{ __html: turnArrowSvg(28, activeWaypoint.steps?.[0]?.type || '', activeWaypoint.steps?.[0]?.modifier) }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-semibold text-white leading-tight">{activeWaypoint.nextInstruction}</p>
-                </div>
-                {nextStopDistance !== null && nextStopDistance !== undefined && nextStopDistance > 0 && (
-                  <div className="shrink-0 text-right">
-                    <p className="text-[10px] text-white/50 uppercase tracking-wider">{pt.remaining}</p>
-                    <p className="text-xl font-bold text-white tabular-nums">
-                      {nextStopDistance >= 1000 ? `${(nextStopDistance / 1000).toFixed(1)}` : `${Math.round(nextStopDistance)}`}
-                    </p>
-                    <p className="text-[10px] text-white/50">{nextStopDistance >= 1000 ? 'km' : 'm'}</p>
-                  </div>
-                )}
-              </div>
-              {activeWaypoint.steps?.[1] && (
-                <div className="absolute -bottom-9 left-3 bg-[#0a3d40] rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg">
-                  <span className="text-[10px] text-white/60 font-semibold uppercase tracking-wide">Then</span>
-                  <div className="w-4 h-4 flex items-center justify-center"
-                    dangerouslySetInnerHTML={{ __html: turnArrowSvg(14, activeWaypoint.steps[1].type, activeWaypoint.steps[1].modifier) }} />
-                  <span className="text-[11px] text-white font-medium truncate max-w-[130px]">{activeWaypoint.steps[1].instruction}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 3. Clipboard Banner */}
-          {pendingLocation && (
-            <div className="pointer-events-auto">
-              <ClipboardBanner
-                location={pendingLocation.location}
-                address={pendingLocation.text}
-                source={locationSource}
-                onAdd={handleDetectedAdd}
-                onDismiss={() => { setShareLocation(null); dismissClip(); }}
-              />
-            </div>
-          )}
-
-          {/* 4. Top Control Bar (flex row, never overlaps thanks to flex-col above) */}
+          {/* 1. Top Control Bar — always at the very top, never pushed down */}
           <div className="flex items-center justify-between pointer-events-auto">
             {/* Start edge: Menu + Back (nav mode) */}
             <div className="flex items-center gap-2">
@@ -528,6 +478,56 @@ export default function Home() {
               )}
             </div>
           </div>
+
+          {/* 2. Offline Banner (pushes nav/clipboard down, never overlaps buttons) */}
+          {!isOnline && (
+            <div className="pointer-events-auto bg-yellow-600/90 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center text-sm font-semibold text-yellow-50 shadow-lg flex items-center justify-center gap-2">
+              <span>⚠️</span> {t.detection.offlineMode}
+            </div>
+          )}
+
+          {/* 3. Navigation Instruction Card */}
+          {navigationMode && hasRoute && activeWaypoint && activeWaypoint.nextInstruction && (
+            <div className="relative pointer-events-auto">
+              <div className="bg-[#0f5156]/95 backdrop-blur-md border border-emerald-700/30 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-2xl shadow-emerald-900/30">
+                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0"
+                  dangerouslySetInnerHTML={{ __html: turnArrowSvg(28, activeWaypoint.steps?.[0]?.type || '', activeWaypoint.steps?.[0]?.modifier) }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-semibold text-white leading-tight">{activeWaypoint.nextInstruction}</p>
+                </div>
+                {nextStopDistance !== null && nextStopDistance !== undefined && nextStopDistance > 0 && (
+                  <div className="shrink-0 text-right">
+                    <p className="text-[10px] text-white/50 uppercase tracking-wider">{pt.remaining}</p>
+                    <p className="text-xl font-bold text-white tabular-nums">
+                      {nextStopDistance >= 1000 ? `${(nextStopDistance / 1000).toFixed(1)}` : `${Math.round(nextStopDistance)}`}
+                    </p>
+                    <p className="text-[10px] text-white/50">{nextStopDistance >= 1000 ? 'km' : 'm'}</p>
+                  </div>
+                )}
+              </div>
+              {activeWaypoint.steps?.[1] && (
+                <div className="absolute -bottom-9 left-3 bg-[#0a3d40] rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg">
+                  <span className="text-[10px] text-white/60 font-semibold uppercase tracking-wide">Then</span>
+                  <div className="w-4 h-4 flex items-center justify-center"
+                    dangerouslySetInnerHTML={{ __html: turnArrowSvg(14, activeWaypoint.steps[1].type, activeWaypoint.steps[1].modifier) }} />
+                  <span className="text-[11px] text-white font-medium truncate max-w-[130px]">{activeWaypoint.steps[1].instruction}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 4. Clipboard Banner */}
+          {pendingLocation && (
+            <div className="pointer-events-auto">
+              <ClipboardBanner
+                location={pendingLocation.location}
+                address={pendingLocation.text}
+                source={locationSource}
+                onAdd={handleDetectedAdd}
+                onDismiss={() => { setShareLocation(null); dismissClip(); }}
+              />
+            </div>
+          )}
         </div>
 
         {/* ===== Middle Safe Zone (flex-1, action buttons at bottom-right) ===== */}
