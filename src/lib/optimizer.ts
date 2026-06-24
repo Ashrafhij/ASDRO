@@ -1,6 +1,9 @@
 import { Location, Customer, Waypoint, OptimizedRoute, TurnStep } from './types';
 
-const OSRM_BASE = 'https://router.project-osrm.org';
+const OSRM_SERVERS = [
+  'https://router.project-osrm.org',
+  'https://routing.openstreetmap.de/routed-car',
+];
 
 function toRad(deg: number): number {
   return (deg * Math.PI) / 180;
@@ -69,52 +72,101 @@ export function formatInstruction(step: { maneuver: { type: string; modifier?: s
   return `${typeLabel}${dir ? ` ${dir}` : ''}${name ? `${t.onto ? ' ' + t.onto.trim() : ''} ${name}` : ''}`;
 }
 
-async function getOSRMRoute(start: Location, end: Location, locale?: string, retries = 2): Promise<{ distance: number; duration: number; geometry?: [number, number][]; instruction?: string; steps: TurnStep[] } | null> {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
-  const url = `${OSRM_BASE}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true`;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.code !== 'Ok' || !data.routes?.length) {
-        console.error('OSRM returned error:', data.code, data.message || '', start, end);
-        if (attempt < retries) { await new Promise(r => setTimeout(r, 1000)); continue; }
-        return null;
-      }
-      const route = data.routes[0];
-      let geometry: [number, number][] | undefined;
-      let instruction: string | undefined;
-      let steps: TurnStep[] = [];
-      if (route.geometry) geometry = decodePolyline(route.geometry);
-      if (route.legs?.[0]?.steps?.length) {
-        const legSteps = route.legs[0].steps;
-        const first = legSteps.find((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart');
-        if (first) instruction = formatInstruction(first, locale);
-        steps = legSteps
-          .filter((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart' && s.maneuver.type !== 'arrive')
-          .map((s: any) => ({
-            type: s.maneuver.type,
-            modifier: s.maneuver.modifier,
-            location: { lat: s.maneuver.location[1], lng: s.maneuver.location[0] },
-            name: s.name || '',
-            distance: s.distance,
-            instruction: formatInstruction(s, locale),
-          }));
-      }
-      return {
-        distance: route.distance / 1000,
-        duration: route.duration / 60,
-        geometry,
-        instruction,
-        steps,
-      };
-    } catch (e) {
-      if (attempt < retries) { await new Promise(r => setTimeout(r, 1000)); continue; }
-      console.error('OSRM route failed:', start, end, e);
-      return null;
-    }
+function sqr(x: number) { return x * x; }
+function dist2(v: [number, number], w: [number, number]) { return sqr(v[0] - w[0]) + sqr(v[1] - w[1]); }
+
+/** Minimum distance (in km) from point p to line segment [v, w] */
+function distToSegmentSq(p: [number, number], v: [number, number], w: [number, number]): number {
+  const l2 = dist2(v, w);
+  if (l2 === 0) return dist2(p, v);
+  let t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return dist2(p, [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])]);
+}
+
+/** Minimum distance (in km) from point to a polyline */
+export function distanceToPolyline(point: Location, polyline: [number, number][]): number {
+  const p: [number, number] = [point.lat, point.lng];
+  let minSq = Infinity;
+  for (let i = 0; i < polyline.length - 1; i++) {
+    const d = distToSegmentSq(p, polyline[i], polyline[i + 1]);
+    if (d < minSq) minSq = d;
   }
-  return null;
+  return Math.sqrt(minSq);
+}
+
+function straightLineGeometry(a: Location, b: Location, steps = 20): [number, number][] {
+  const pts: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    pts.push([a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t]);
+  }
+  return pts;
+}
+
+export async function getOSRMRoute(start: Location, end: Location, locale?: string): Promise<{ distance: number; duration: number; geometry: [number, number][]; instruction?: string; steps: TurnStep[] }> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return { distance: haversineDistance(start, end), duration: (haversineDistance(start, end) / 40) * 60, geometry: straightLineGeometry(start, end), steps: [] };
+
+  for (const base of OSRM_SERVERS) {
+    const url = `${base}/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&steps=true`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        const data = await res.json();
+        if (data.code !== 'Ok' || !data.routes?.length) {
+          console.error('OSRM error:', data.code, data.message || '', base);
+          if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
+          break;
+        }
+        const route = data.routes[0];
+        const geometry = route.geometry ? decodePolyline(route.geometry) : undefined;
+        let instruction: string | undefined;
+        let steps: TurnStep[] = [];
+        if (route.legs?.[0]?.steps?.length) {
+          const legSteps = route.legs[0].steps;
+          const first = legSteps.find((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart');
+          if (first) instruction = formatInstruction(first, locale);
+          steps = legSteps
+            .filter((s: { maneuver: { type: string } }) => s.maneuver.type !== 'depart' && s.maneuver.type !== 'arrive')
+            .map((s: any) => ({
+              type: s.maneuver.type,
+              modifier: s.maneuver.modifier,
+              location: { lat: s.maneuver.location[1], lng: s.maneuver.location[0] },
+              name: s.name || '',
+              distance: s.distance,
+              instruction: formatInstruction(s, locale),
+            }));
+        }
+        clearTimeout(timeoutId);
+        return {
+          distance: route.distance / 1000,
+          duration: route.duration / 60,
+          geometry: geometry || straightLineGeometry(start, end),
+          instruction,
+          steps,
+        };
+      } catch (e: any) {
+        if (e?.name === 'AbortError') {
+          console.error('OSRM timeout:', base);
+          break;
+        }
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
+        console.error('OSRM failed:', base, start, end, e);
+      }
+    }
+    clearTimeout(timeoutId);
+  }
+
+  // All servers failed — return straight-line fallback
+  return {
+    distance: haversineDistance(start, end),
+    duration: (haversineDistance(start, end) / 40) * 60,
+    geometry: straightLineGeometry(start, end),
+    steps: [],
+  };
 }
 
 function buildHaversineMatrix(points: Location[]): { distances: number[][]; durations: number[][] } {
@@ -234,11 +286,11 @@ export async function optimizeRoute(
     const to = cust.location;
 
     const osrm = await getOSRMRoute(from, to, locale);
-    const dist = osrm ? osrm.distance : haversineDistance(from, to);
-    const dur = osrm ? osrm.duration : (dist / 40) * 60;
-    const legGeometry = osrm?.geometry;
-    const nextInstruction = osrm?.instruction;
-    const steps = osrm?.steps;
+    const dist = osrm.distance;
+    const dur = osrm.duration;
+    const legGeometry = osrm.geometry;
+    const nextInstruction = osrm.instruction;
+    const steps = osrm.steps;
 
     totalDist += dist;
     totalDur += dur;
@@ -266,8 +318,8 @@ export async function optimizeRoute(
   if (hasEnd && finalCustomers.length > 0) {
     const lastCust = customers[finalCustomers[finalCustomers.length - 1]];
     const osrm = await getOSRMRoute(lastCust.location, endLocation!, locale);
-    const dist = osrm ? osrm.distance : haversineDistance(lastCust.location, endLocation!);
-    const dur = osrm ? osrm.duration : (dist / 40) * 60;
+    const dist = osrm.distance;
+    const dur = osrm.duration;
     totalDist += dist;
     totalDur += dur;
 
@@ -277,9 +329,9 @@ export async function optimizeRoute(
       estimatedArrival: '',
       distanceFromPrevious: parseFloat(dist.toFixed(1)),
       timeFromPrevious: parseFloat(dur.toFixed(1)),
-      legGeometry: osrm?.geometry,
-      nextInstruction: osrm?.instruction,
-      steps: osrm?.steps,
+      legGeometry: osrm.geometry,
+      nextInstruction: osrm.instruction,
+      steps: osrm.steps,
     });
   }
 

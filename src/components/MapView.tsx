@@ -229,12 +229,10 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         }
         bounds.push([wp.customer.location.lat, wp.customer.location.lng]);
 
-        if (isDone || isSkipped) return;
-
         const isCurrentLeg = wp.customer.id === nextStopId;
+        if (isDone || isSkipped || !isCurrentLeg) return;
+
         const prevWp = i === 0 ? null : sorted[i - 1];
-        const prevIsBehind = prevWp ? (cs.has(prevWp.customer.id) || sk.has(prevWp.customer.id)) : true;
-        if (prevIsBehind && !isCurrentLeg) return;
 
         let legCoords: [number, number][];
         if (wp.legGeometry && wp.legGeometry.length > 0) {
@@ -245,7 +243,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
           legCoords = [[from.lat, from.lng], [wp.customer.location.lat, wp.customer.location.lng]];
         }
 
-        if (isCurrentLeg && driverLocation && legCoords.length > 1) {
+        if (driverLocation && legCoords.length > 1) {
           let closestIdx = 0;
           let minDist = Infinity;
           for (let j = 0; j < legCoords.length; j++) {
@@ -260,7 +258,7 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
         addRoutePolyline(group, legCoords, navigationMode);
 
         // Turn arrows for current leg
-        if (isCurrentLeg && wp.steps && wp.steps.length > 0) {
+        if (wp.steps && wp.steps.length > 0) {
           const relevantSteps = wp.steps.filter(s => s.type !== 'continue');
           const maxSteps = Math.min(relevantSteps.length, 5);
           for (let si = 0; si < maxSteps; si++) {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Customer, Location, Waypoint, OptimizedRoute } from '@/lib/types';
-import { optimizeRoute, formatInstruction, haversineDistance } from '@/lib/optimizer';
+import { optimizeRoute, formatInstruction, haversineDistance, getOSRMRoute, distanceToPolyline } from '@/lib/optimizer';
 import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
 import { useClipboardDetection } from '@/lib/useClipboardDetection';
@@ -51,6 +51,8 @@ export default function Home() {
   const [followDriver, setFollowDriver] = useState(true);
   const [navigationMode, setNavigationMode] = useState(false);
   const [nextStopDistance, setNextStopDistance] = useState<number | null>(null);
+  const [offRoute, setOffRoute] = useState(false);
+  const [reRouteInProgress, setReRouteInProgress] = useState(false);
   const [routeStart, setRouteStart] = useState<{ location: Location; label: string } | null>(() => load('routeStart', null));
   const [routeEnd, setRouteEnd] = useState<{ location: Location; label: string } | null>(() => load('routeEnd', null));
   const [settingLocation, setSettingLocation] = useState<'start' | 'end' | null>(null);
@@ -293,6 +295,39 @@ export default function Home() {
     setNextStopDistance(haversineDistance(driverLocation, nextStop.customer.location) * 1000);
   }, [driverLocation, route, completedIds, skippedIds]);
 
+  // Off-route detection
+  useEffect(() => {
+    if (!navigationMode || !driverLocation || !route) { setOffRoute(false); return; }
+    const sorted = [...route.waypoints].sort((a, b) => a.order - b.order);
+    const nextStop = sorted.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
+    if (!nextStop || !nextStop.legGeometry || nextStop.legGeometry.length < 2) { setOffRoute(false); return; }
+    const distKm = distanceToPolyline(driverLocation, nextStop.legGeometry);
+    setOffRoute(distKm * 1000 > 150);
+  }, [navigationMode, driverLocation, route, completedIds, skippedIds]);
+
+  // Auto re-route when off-route is detected
+  useEffect(() => {
+    if (!offRoute || !driverLocation || !route || reRouteInProgress) return;
+    const sorted = [...route.waypoints].sort((a, b) => a.order - b.order);
+    const nextStop = sorted.find(w => !completedIds.has(w.customer.id) && !skippedIds.has(w.customer.id));
+    if (!nextStop) return;
+    setReRouteInProgress(true);
+    getOSRMRoute(driverLocation, nextStop.customer.location, locale).then(osrm => {
+      setRoute(prev => {
+        if (!prev) return prev;
+        const updated = prev.waypoints.map(wp => {
+          if (wp.customer.id === nextStop.customer.id) {
+            return { ...wp, legGeometry: osrm.geometry, steps: osrm.steps, nextInstruction: osrm.instruction, distanceFromPrevious: parseFloat(osrm.distance.toFixed(1)), timeFromPrevious: parseFloat(osrm.duration.toFixed(1)) };
+          }
+          return wp;
+        });
+        return { ...prev, waypoints: updated };
+      });
+      setOffRoute(false);
+      setReRouteInProgress(false);
+    }).catch(() => { setReRouteInProgress(false); });
+  }, [offRoute, driverLocation, route, completedIds, skippedIds, reRouteInProgress, locale]);
+
   const handleMarkComplete = useCallback(async (customerId: string) => {
     const newCompleted = new Set(completedIds); newCompleted.add(customerId);
     setCompletedIds(newCompleted);
@@ -490,6 +525,15 @@ export default function Home() {
                   <span className="text-[11px] text-white font-medium truncate max-w-[130px]">{turnText(activeWaypoint.steps[1])}</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Off-route Banner */}
+          {offRoute && (
+            <div className="pointer-events-auto bg-red-800/90 backdrop-blur-md border border-red-500/40 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-2xl">
+              <span className="text-lg shrink-0">⚠️</span>
+              <p className="text-sm text-red-50 font-medium flex-1">{pt.offRoute}</p>
+              <div className="w-4 h-4 rounded-full border-2 border-red-300 border-t-transparent animate-spin" />
             </div>
           )}
 
