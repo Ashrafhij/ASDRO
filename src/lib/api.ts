@@ -25,9 +25,10 @@ export function watchDriverLocation(onLocation: (loc: Location) => void, onError
       lat: pos.coords.latitude,
       lng: pos.coords.longitude,
       heading: pos.coords.heading ?? undefined,
+      speed: pos.coords.speed ?? undefined,
     }),
     (err) => onError?.(err),
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+    { enableHighAccuracy: true, timeout: 5000, maximumAge: 500 }
   );
   return () => navigator.geolocation.clearWatch(watchId);
 }

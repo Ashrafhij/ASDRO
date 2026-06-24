@@ -8,6 +8,7 @@ import { getDriverLocation, watchDriverLocation } from '@/lib/api';
 import { useI18n } from '@/lib/i18n-context';
 import { useClipboardDetection } from '@/lib/useClipboardDetection';
 import { useWakeLock } from '@/lib/useWakeLock';
+import { useCompassHeading } from '@/lib/useCompassHeading';
 import { reverseGeocode, parseWhatsAppLocation, geocodeAddress } from '@/lib/geocoding';
 import CustomerInput from '@/components/CustomerInput';
 import RouteList from '@/components/RouteList';
@@ -50,6 +51,9 @@ export default function Home() {
   useEffect(() => { setPendingStopName(''); }, [pendingCustomer]);
   const [followDriver, setFollowDriver] = useState(true);
   const [navigationMode, setNavigationMode] = useState(false);
+  const compassHeading = useCompassHeading();
+  const compassRef = useRef(compassHeading);
+  compassRef.current = compassHeading;
   const [nextStopDistance, setNextStopDistance] = useState<number | null>(null);
   const [offRoute, setOffRoute] = useState(false);
   const [reRouteInProgress, setReRouteInProgress] = useState(false);
@@ -242,10 +246,10 @@ export default function Home() {
 
   useEffect(() => {
     getDriverLocation()
-      .then((loc) => { setDriverLocation(loc); setStartLocation(loc); setLocating(false); })
+      .then((loc) => { setDriverLocation({ ...loc, heading: loc.heading ?? compassHeading } as Location); setStartLocation(loc); setLocating(false); })
       .catch(() => setLocating(false));
     const stopWatching = watchDriverLocation(
-      (loc) => setDriverLocation(loc),
+      (loc) => setDriverLocation(prev => prev ? { ...loc, heading: loc.heading ?? compassRef.current, speed: loc.speed } : { ...loc, heading: loc.heading ?? compassRef.current }),
       () => {}
     );
     return stopWatching;
@@ -470,6 +474,7 @@ export default function Home() {
           endPoint={routeEnd}
           onMapClick={settingLocation ? handleMapClick : undefined}
           placingLocation={placingLocation}
+          compassHeading={compassHeading}
           nextStopId={nextStopId}
           arrivedStopId={arrivedStopId}
           completedIds={completedIds}

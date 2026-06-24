@@ -27,6 +27,7 @@ interface MapViewProps {
   skippedIds?: Set<string>;
   pendingCustomer?: Customer | null;
   placingLocation?: Location | null;
+  compassHeading?: number;
   navigationMode?: boolean;
 }
 
@@ -94,7 +95,7 @@ function stopIconHtml(order: number, size: number, bg: string, pulse: boolean, g
 
 export default forwardRef<MapViewRef, MapViewProps>(function MapView({
   waypoints, customers = [], driverLocation, startLocation, startPoint, endPoint, height = '100%', followDriver, onManualPan, onMapClick,
-  nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, placingLocation, navigationMode,
+  nextStopId, arrivedStopId, completedIds, skippedIds, pendingCustomer, placingLocation, compassHeading, navigationMode,
 }, ref) {
   const { t } = useI18n();
   const mt = t.map;
@@ -336,6 +337,18 @@ export default forwardRef<MapViewRef, MapViewProps>(function MapView({
       driverMarkerRef.current = marker;
     }
   }, [driverLocation, navigationMode]);
+
+  // Compass heading — update marker rotation independently
+  useEffect(() => {
+    if (!driverLocation || !driverMarkerRef.current) return;
+    const effectiveHeading = driverLocation.heading ?? compassHeading;
+    if (effectiveHeading === undefined) return;
+    const iconHtml = navigationMode ? navChevronIconHtml(effectiveHeading) : driverIconHtml(effectiveHeading);
+    driverMarkerRef.current.setIcon(L.divIcon({
+      html: iconHtml,
+      className: '', iconSize: [44, 44], iconAnchor: [22, 22],
+    }));
+  }, [compassHeading, navigationMode, driverLocation?.heading]);
 
   // Initial fit: when first driver location arrives, fit bounds to show everything
   useEffect(() => {

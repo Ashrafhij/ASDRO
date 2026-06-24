@@ -2,6 +2,7 @@ export interface Location {
   lat: number;
   lng: number;
   heading?: number;
+  speed?: number;
 }
 
 export interface Customer {
